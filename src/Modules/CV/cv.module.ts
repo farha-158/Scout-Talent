@@ -1,0 +1,41 @@
+import { Module } from "@nestjs/common";
+import { CVController } from "./cv.controller";
+import { CVService } from "./cv.service";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { CV } from "./cv.entity";
+import { MulterModule } from "@nestjs/platform-express";
+import { diskStorage } from "multer";
+import { UserModule } from "../Users/user.module";
+
+
+@Module({
+    controllers:[CVController],
+    providers:[CVService],
+    imports:[
+        UserModule,
+        TypeOrmModule.forFeature([CV]),
+        MulterModule.register({
+            storage:diskStorage({
+                destination:'./FileCV',
+                filename:(req,file,cb)=>{
+                    const prefix= `${Date.now()}-${Math.round(Math.random()*1000000)}`
+                    const filename= `${prefix}-${file.originalname}`
+                    cb(null,filename)
+                }
+            }),
+            fileFilter:(req,file,cb)=>{
+                if (
+                    file.mimetype !== 'application/pdf' ||
+                    !file.originalname.match(/\.(pdf)$/)
+                ) {
+                    return cb(new Error('Only PDF files are allowed'), false);
+                }
+                cb(null, true);
+            },
+            limits: {
+                fileSize: 2 * 1024 * 1024,
+            },
+        })
+    ]
+})
+export class CVModule{}
