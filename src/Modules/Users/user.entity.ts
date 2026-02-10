@@ -1,6 +1,7 @@
 import { CURRENT_TIMESTAMP } from "src/utils/Constant/constant";
 import { RoleUser } from "src/utils/Enums/user.enum";
-import { Column, CreateDateColumn, Entity,PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity,OneToMany,PrimaryGeneratedColumn } from "typeorm";
+import { Job } from "../Job/job.entity";
 
 @Entity({name:'users'})
 export class User{
@@ -30,4 +31,7 @@ export class User{
 
     @CreateDateColumn({type:'timestamp' , default:()=>CURRENT_TIMESTAMP})
     createAt:Date
+
+    @OneToMany(()=>Job,(job)=>job.recruiter)
+    jobs:Job[]
 }

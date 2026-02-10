@@ -10,15 +10,23 @@ import { ConfigService } from "@nestjs/config";
 import { MailService } from "../Mail/mail.service";
 import { forgetPasswordDTO } from "./dto/forget_password.dto";
 import { resetPasswordDTO } from "./dto/reset_password.dto";
+import { JwtService } from "@nestjs/jwt";
+import { JwtPayloadType } from "src/utils/type";
 @Injectable()
 export class UserService{
     constructor(@InjectRepository(User) 
         private userRepository : Repository<User>,
         private config: ConfigService,
-        private mailService :MailService
+        private mailService :MailService,
+        private jwtService:JwtService
 
     ){}
 
+    /**
+     * user register 
+     * @param dto name , email, password, role
+     * @returns message
+     */
     public async register(dto:registerDTO){
         const {name , email , password , role} = dto
 
@@ -43,6 +51,11 @@ export class UserService{
         return {message:'verification email has been send , please check your email'}
     }
 
+    /**
+     * user login
+     * @param dto email , password
+     * @returns message
+     */
     public async login( dto:loginDTO){
 
         const {email , password} = dto
@@ -65,9 +78,19 @@ export class UserService{
 
             return {message:'verification email has been send , please check your email'}
         }
-        return {message:'login successful'}
+        const payload:JwtPayloadType = {id:user.id ,role:user.role}
+
+        const accessToken = await this.jwtService.signAsync(payload)
+        
+        return { message:'login successful', accessToken }
     }
 
+    /**
+     * to verify user's email
+     * @param id user Id
+     * @param verificationToken 
+     * @returns message
+     */
     public async verifyEmail(id:number , verificationToken:string){
 
         const user = await this.userRepository.findOne({where:{id}})
@@ -85,6 +108,11 @@ export class UserService{
 
     }
 
+    /**
+     * user forget password
+     * @param dto email
+     * @returns message
+     */
     public async forgetPassword(dto:forgetPasswordDTO){
         const {email}=dto
 
@@ -103,6 +131,13 @@ export class UserService{
         return{message:'check your email , click to link'}
     }
 
+    /**
+     * update user's password
+     * @param dto new password
+     * @param id user id
+     * @param resetPasswordToken 
+     * @returns message
+     */
     public async resetPassword(dto:resetPasswordDTO , id:number, resetPasswordToken:string){
         const {newPassword} = dto
         const user= await this.userRepository.findOne({where:{id}})

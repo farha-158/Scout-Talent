@@ -6,6 +6,7 @@ import { UserModule } from './Modules/Users/user.module';
 import { MailModule } from './Modules/Mail/mail.module';
 import { CV } from './Modules/CV/cv.entity';
 import { CVModule } from './Modules/CV/cv.module';
+import { Job } from './Modules/Job/job.entity';
 
 @Module({
   imports: [
@@ -16,13 +17,14 @@ import { CVModule } from './Modules/CV/cv.module';
       useFactory:(config:ConfigService)=>{
         return{
           type:'postgres',
-          database:'scout_talent',
+          host:config.get<string>('DB_HOST'),
+          port:Number(config.get<string>('PORT')),
+          username:config.get<string>('DB_USERNAME'),
           password:config.get<string>('PASSWORD'),
-          username:'postgres',
-          port:5432,
-          host:'localhost',
-          synchronize:true,
-          entities:[ User , CV ]
+          database:config.get<string>('DB_NAME'),
+
+          synchronize:process.env.NODE_ENV !== 'production',
+          entities:[ User , CV ,Job]
         }
       }
       

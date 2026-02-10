@@ -14,6 +14,6 @@ export class CV{
     createdAt:Date
 
     @OneToOne(()=>User)
-    @JoinColumn({name:'userId'})
+    @JoinColumn({name:'ApplicantId'})
     user:User
 }
