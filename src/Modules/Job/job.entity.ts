@@ -1,7 +1,8 @@
 import { CURRENT_TIMESTAMP } from "src/utils/Constant/constant";
 import { JobStatus } from "src/utils/Enums/job.enum";
-import { Column, CreateDateColumn, Entity,JoinTable,ManyToMany,ManyToOne,PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity,ManyToOne,OneToMany,PrimaryGeneratedColumn } from "typeorm";
 import { User } from "../Users/user.entity";
+import { JobApplicant } from "./job_applicant.entity";
 
 @Entity({name:'jobs'})
 export class Job{
@@ -32,17 +33,7 @@ export class Job{
     @ManyToOne(()=>User,(user)=>user.jobs)
     recruiter:User
 
-    @ManyToMany(()=>User)
-    @JoinTable({
-        name: 'job_applicant',
-        joinColumn: {
-            name: 'job_id',
-            referencedColumnName: 'id',
-        },
-        inverseJoinColumn: {
-            name: 'applicant_id',
-            referencedColumnName: 'id',
-        },
-    })
-    User:User
+    @OneToMany(()=>JobApplicant,(jobApllicant)=>jobApllicant.applicant)
+    applicants:JobApplicant[]
+
 }
