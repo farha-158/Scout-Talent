@@ -1,9 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn ,CreateDateColumn, OneToOne, JoinColumn} from "typeorm";
+import { Column, Entity, PrimaryGeneratedColumn ,CreateDateColumn, ManyToOne} from "typeorm";
 import { CURRENT_TIMESTAMP } from "src/utils/Constant/constant";
 import { User } from "../Users/user.entity";
 
 @Entity({name:'CV'})
 export class CV{
+    
     @PrimaryGeneratedColumn()
     id:number
 
@@ -13,7 +14,7 @@ export class CV{
     @CreateDateColumn({type:'timestamp' , default:()=>CURRENT_TIMESTAMP})
     createdAt:Date
 
-    @OneToOne(()=>User)
-    @JoinColumn({name:'ApplicantId'})
-    user:User
+    @ManyToOne(()=>User,(user)=>user.Cvs)
+    applicant:User
+
 }

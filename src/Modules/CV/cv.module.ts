@@ -6,13 +6,14 @@ import { CV } from "./cv.entity";
 import { MulterModule } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
 import { UserModule } from "../Users/user.module";
-
+import { JwtModule } from "@nestjs/jwt";
 
 @Module({
     controllers:[CVController],
     providers:[CVService],
     imports:[
         UserModule,
+        JwtModule,
         TypeOrmModule.forFeature([CV]),
         MulterModule.register({
             storage:diskStorage({
@@ -36,6 +37,7 @@ import { UserModule } from "../Users/user.module";
                 fileSize: 2 * 1024 * 1024,
             },
         })
-    ]
+    ],
+    exports:[CVService]
 })
 export class CVModule{}

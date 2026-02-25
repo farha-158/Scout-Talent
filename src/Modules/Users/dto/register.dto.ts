@@ -14,6 +14,17 @@ export class registerDTO{
     password:string
 
     @IsString()
+    phone:string
+
+    @IsString()
+    job_title:string
+
+    @IsString()
+    location:string
+
+    linkedIn_profile:string
+
+    @IsString()
     @IsNotEmpty()
     role:RoleUser
 }

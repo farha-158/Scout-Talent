@@ -1,5 +1,5 @@
 import { CURRENT_TIMESTAMP } from "src/utils/Constant/constant";
-import { JobStatus } from "src/utils/Enums/job.enum";
+import { JobStatus, JobType,WorkMode } from "src/utils/Enums/job.enum";
 import { Column, CreateDateColumn, Entity,ManyToOne,OneToMany,PrimaryGeneratedColumn } from "typeorm";
 import { User } from "../Users/user.entity";
 import { JobApplicant } from "./job_applicant.entity";
@@ -7,22 +7,41 @@ import { JobApplicant } from "./job_applicant.entity";
 @Entity({name:'jobs'})
 export class Job{
     @PrimaryGeneratedColumn()
-    id:number
+    id: number;
 
     @Column()
-    title:string
+    title: string;
 
     @Column()
-    description:string
+    location: string;
 
-    @Column({type:'enum' , enum:JobStatus})
-    status:JobStatus
+    @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+    minSalary: number;
+
+    @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+    maxSalary: number;
+
+    // 📌 Type & Status
+    @Column({ type: 'enum', enum: JobType })
+    type: JobType;
+
+    @Column({ type: 'enum', enum: JobStatus, default: JobStatus.DRAFT })
+    status: JobStatus;
+
+    @Column({ type: 'enum', enum: WorkMode  })
+    workMode: WorkMode;
+
+    @Column({ type: 'text' })
+    description: string;
+
+    @Column('simple-array', { nullable: true })
+    skills: string[];
+
+    @Column('simple-array', { nullable: true })
+    responsibilities: string[];
 
     @Column()
-    deelline:Date
-
-    @Column()
-    salaryMin:number
+    requirements: string;
 
     @CreateDateColumn({type:'timestamp' , default:()=>CURRENT_TIMESTAMP})
     createdAt:Date
@@ -30,8 +49,8 @@ export class Job{
     @CreateDateColumn({type:'timestamp' , default:()=>CURRENT_TIMESTAMP , onUpdate:CURRENT_TIMESTAMP})
     updatedAt:Date
 
-    @ManyToOne(()=>User,(user)=>user.jobs)
-    recruiter:User
+    @ManyToOne(()=>User,(user)=>user.jobs,{eager:true})
+    company:User
 
     @OneToMany(()=>JobApplicant,(jobApllicant)=>jobApllicant.applicant)
     applicants:JobApplicant[]

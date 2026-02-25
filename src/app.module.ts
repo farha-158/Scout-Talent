@@ -10,12 +10,18 @@ import { Job } from './Modules/Job/job.entity';
 import { JobModule } from './Modules/Job/job.module';
 import { JobApplicant } from './Modules/Job/job_applicant.entity';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { Skill } from './Modules/Skills/skills.entity';
+import { SkillModule } from './Modules/Skills/skills.module';
+import { Experience } from './Modules/Experience/experience.entity';
+import { ExperienceModule } from './Modules/Experience/experience.module';
 
 @Module({
   imports: [
     UserModule,
     CVModule,
     JobModule,
+    SkillModule,
+    ExperienceModule,
     MailModule,
     TypeOrmModule.forRootAsync({
       inject:[ConfigService],
@@ -29,7 +35,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
           database:config.get<string>('DB_NAME'),
 
           synchronize:process.env.NODE_ENV !== 'production',
-          entities:[ User , CV ,Job ,JobApplicant ]
+          entities:[ User , CV ,Job ,JobApplicant ,Skill , Experience]
         }
       }
       

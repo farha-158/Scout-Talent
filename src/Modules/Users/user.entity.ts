@@ -3,6 +3,9 @@ import { RoleUser } from "src/utils/Enums/user.enum";
 import { Column, CreateDateColumn, Entity,OneToMany,PrimaryGeneratedColumn } from "typeorm";
 import { Job } from "../Job/job.entity";
 import { JobApplicant } from "../Job/job_applicant.entity";
+import { CV } from "../CV/cv.entity";
+import { Skill } from "../Skills/skills.entity";
+import { Experience } from "../Experience/experience.entity";
 
 @Entity({name:'users'})
 export class User{
@@ -17,6 +20,18 @@ export class User{
 
     @Column()
     password:string
+
+    @Column()
+    phone:string
+
+    @Column()
+    job_title:string
+
+    @Column()
+    location:string
+
+    @Column()
+    linkedIn_profile:string
 
     @Column({type:'enum',enum:RoleUser ,default:RoleUser.APPLICANT})
     role:RoleUser
@@ -33,8 +48,17 @@ export class User{
     @CreateDateColumn({type:'timestamp' , default:()=>CURRENT_TIMESTAMP})
     createAt:Date
 
-    @OneToMany(()=>Job,(job)=>job.recruiter)
+    @OneToMany(()=>Job,(job)=>job.company)
     jobs:Job[]
+
+    @OneToMany(()=>CV,(cv)=>cv.applicant)
+    Cvs:CV[]
+
+    @OneToMany(()=>Skill,(skill)=>skill.user,{eager:true})
+    skills:Skill[]
+
+    @OneToMany(()=>Experience,(experience)=>experience.user,{eager:true})
+    experience:Experience[]
 
     @OneToMany(()=>JobApplicant,(jobApplicant)=>jobApplicant.job)
     jobApplicant:JobApplicant

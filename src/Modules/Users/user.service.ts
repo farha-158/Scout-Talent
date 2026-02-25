@@ -28,7 +28,8 @@ export class UserService{
      * @returns message
      */
     public async register(dto:registerDTO){
-        const {name , email , password , role} = dto
+
+        const {name , email , password ,linkedIn_profile,phone,location,job_title, role} = dto
 
         const user = await this.userRepository.findOne({where:{email}})
         if(user) throw new BadRequestException('Email already in DB')
@@ -37,9 +38,9 @@ export class UserService{
         const hash = await bcrypt.hash(password, saltOrRounds);
 
         const Suser = this.userRepository.create({
-            name , email , password:hash , role,
+            name , email , password:hash , role,phone,
+            linkedIn_profile,location,job_title,
             verificationToken:randomBytes(32).toString('hex')
-
         })
 
         const newuser=await this.userRepository.save(Suser)

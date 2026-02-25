@@ -1,9 +1,14 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseIntPipe, Post, UseGuards } from "@nestjs/common";
 import { UserService } from "./user.service";
 import { registerDTO } from "./dto/register.dto";
 import { loginDTO } from "./dto/login.dto";
 import { forgetPasswordDTO } from "./dto/forget_password.dto";
 import { resetPasswordDTO } from "./dto/reset_password.dto";
+import { Roles } from "./decorator/user_role.decorator";
+import { RoleUser } from "src/utils/Enums/user.enum";
+import { AuthGuard } from "./guard/AuthUser.guard";
+import { currentUser } from "./decorator/currentUser.decorator";
+import type { JwtPayloadType } from "src/utils/type";
 
 
 @Controller()
@@ -44,5 +49,13 @@ export class UserController{
         @Body() body : resetPasswordDTO
     ){
         return await this.userService.resetPassword(body ,id,resetPasswordToken)
+    }
+
+    @Get('user/profile')
+    @Roles(RoleUser.APPLICANT)
+    @UseGuards(AuthGuard)
+    public async GetProfile(@currentUser() user : JwtPayloadType){
+        
+        return await this.userService.findUser(user.id)
     }
 }

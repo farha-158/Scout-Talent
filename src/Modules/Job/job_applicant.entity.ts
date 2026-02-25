@@ -1,23 +1,28 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, ManyToOne, OneToOne, PrimaryGeneratedColumn ,JoinColumn} from "typeorm";
 import { Job } from "./job.entity";
 import { User } from "../Users/user.entity";
-import { JobStatus } from "src/utils/Enums/job.enum";
 import { CURRENT_TIMESTAMP } from "src/utils/Constant/constant";
-
+import { CandidateStatus } from "src/utils/Enums/candidateStatus.enum";
+import { CV } from "../CV/cv.entity";
 
 @Entity({name:'job_applicant'})
 export class JobApplicant{
+
     @PrimaryGeneratedColumn()
     id:number
 
-    @ManyToOne(()=>Job,(job)=>job.applicants)
+    @Column({ type:'enum' ,enum:CandidateStatus, default:CandidateStatus.NEW })
+    status:CandidateStatus
+
+    @ManyToOne(()=>Job,(job)=>job.applicants,{eager:true})
     job:Job
 
-    @ManyToOne(()=>User,(user)=>user.jobApplicant)
+    @ManyToOne(()=>User,(user)=>user.jobApplicant,{eager:true})
     applicant:User
 
-    @Column({type:'enum',enum:JobStatus , default:JobStatus.DRAFT})
-    status:JobStatus
+    @OneToOne(()=>CV,{eager:true})
+    @JoinColumn()
+    cv:CV
 
     @CreateDateColumn({type:'timestamp' , default:()=>CURRENT_TIMESTAMP})
     createdAt:Date

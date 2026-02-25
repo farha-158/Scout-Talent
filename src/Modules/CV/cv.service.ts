@@ -17,10 +17,17 @@ export class CVService{
 
         if(!user) throw new BadRequestException('user not found')
 
-        const cv= this.cvRepository.create({fileUrl,user})
+        const cv= this.cvRepository.create({fileUrl,applicant:user})
 
         await this.cvRepository.save(cv)
 
         return {message:"cv upload successful"}
+    }
+
+    public async findCV(id:number){
+        
+        const cv =await this.cvRepository.findOne({where:{id}})
+
+        return cv
     }
 }
