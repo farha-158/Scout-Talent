@@ -14,6 +14,9 @@ export class JobApplicant{
     @Column({ type:'enum' ,enum:CandidateStatus, default:CandidateStatus.NEW })
     status:CandidateStatus
 
+    @Column()
+    about:string
+
     @ManyToOne(()=>Job,(job)=>job.applicants,{eager:true})
     job:Job
 
@@ -27,4 +30,6 @@ export class JobApplicant{
     @CreateDateColumn({type:'timestamp' , default:()=>CURRENT_TIMESTAMP})
     createdAt:Date
 
+    @Column({ type: 'timestamp', nullable: true ,default:null})
+    hiredAt: Date;
 }

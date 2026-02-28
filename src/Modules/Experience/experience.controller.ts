@@ -1,12 +1,12 @@
 import { Body, Controller, Delete, Param, ParseIntPipe, Post, Put, UseGuards } from "@nestjs/common";
 import { ExperienceService } from "./experience.service";
-import { Roles } from "../Users/decorator/user_role.decorator";
 import { RoleUser } from "src/utils/Enums/user.enum";
-import { AuthGuard } from "../Users/guard/AuthUser.guard";
 import { addExperienceDTO } from "./dto/addExperience.dto";
-import { currentUser } from "../Users/decorator/currentUser.decorator";
 import type { JwtPayloadType } from "src/utils/type";
 import { updateExperienceDTO } from "./dto/updateExperience.dto";
+import { Roles } from "../auth/decorator/user_role.decorator";
+import { AuthGuard } from "../auth/guards/AuthUser.guard";
+import { currentUser } from "../auth/decorator/currentUser.decorator";
 
 
 @Controller()

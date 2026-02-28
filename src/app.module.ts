@@ -10,10 +10,11 @@ import { Job } from './Modules/Job/job.entity';
 import { JobModule } from './Modules/Job/job.module';
 import { JobApplicant } from './Modules/Job/job_applicant.entity';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { Skill } from './Modules/Skills/skills.entity';
+import { SkillOrSpecializations } from './Modules/Skills/skills.entity';
 import { SkillModule } from './Modules/Skills/skills.module';
 import { Experience } from './Modules/Experience/experience.entity';
 import { ExperienceModule } from './Modules/Experience/experience.module';
+import { AuthModule } from './Modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ExperienceModule } from './Modules/Experience/experience.module';
     SkillModule,
     ExperienceModule,
     MailModule,
+    AuthModule,
     TypeOrmModule.forRootAsync({
       inject:[ConfigService],
       useFactory:(config:ConfigService)=>{
@@ -33,12 +35,10 @@ import { ExperienceModule } from './Modules/Experience/experience.module';
           username:config.get<string>('DB_USERNAME'),
           password:config.get<string>('PASSWORD'),
           database:config.get<string>('DB_NAME'),
-
           synchronize:process.env.NODE_ENV !== 'production',
-          entities:[ User , CV ,Job ,JobApplicant ,Skill , Experience]
+          entities:[ User , CV ,Job ,JobApplicant ,SkillOrSpecializations , Experience]
         }
       }
-      
     }),
     ConfigModule.forRoot({
       isGlobal:true,
@@ -51,6 +51,6 @@ import { ExperienceModule } from './Modules/Experience/experience.module';
       }
     ])
   ]
-
 })
+
 export class AppModule {}

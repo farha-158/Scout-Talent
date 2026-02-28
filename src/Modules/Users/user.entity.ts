@@ -4,7 +4,7 @@ import { Column, CreateDateColumn, Entity,OneToMany,PrimaryGeneratedColumn } fro
 import { Job } from "../Job/job.entity";
 import { JobApplicant } from "../Job/job_applicant.entity";
 import { CV } from "../CV/cv.entity";
-import { Skill } from "../Skills/skills.entity";
+import { SkillOrSpecializations } from "../Skills/skills.entity";
 import { Experience } from "../Experience/experience.entity";
 
 @Entity({name:'users'})
@@ -35,6 +35,12 @@ export class User{
 
     @Column({type:'enum',enum:RoleUser ,default:RoleUser.APPLICANT})
     role:RoleUser
+
+    @Column({nullable:true})
+    About:string
+    
+    @Column({nullable:true})
+    refreshToken:string
     
     @Column({default:false})
     isAccountVerified:boolean
@@ -54,12 +60,12 @@ export class User{
     @OneToMany(()=>CV,(cv)=>cv.applicant)
     Cvs:CV[]
 
-    @OneToMany(()=>Skill,(skill)=>skill.user,{eager:true})
-    skills:Skill[]
+    @OneToMany(()=>SkillOrSpecializations,(s)=>s.userORcompany,{eager:true})
+    skillsORspecializations:SkillOrSpecializations[]
 
     @OneToMany(()=>Experience,(experience)=>experience.user,{eager:true})
     experience:Experience[]
 
     @OneToMany(()=>JobApplicant,(jobApplicant)=>jobApplicant.job)
-    jobApplicant:JobApplicant
+    jobApplicant:JobApplicant[]
 }

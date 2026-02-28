@@ -3,7 +3,7 @@ import { CURRENT_TIMESTAMP } from "src/utils/Constant/constant";
 import { User } from "../Users/user.entity";
 
 @Entity({name:'skills'})
-export class Skill{
+export class SkillOrSpecializations{
 
     @PrimaryGeneratedColumn()
     id:number
@@ -17,6 +17,6 @@ export class Skill{
     @CreateDateColumn({type:'timestamp' , default:()=>CURRENT_TIMESTAMP, onUpdate:CURRENT_TIMESTAMP})
     updatedAt:Date
 
-    @ManyToOne(()=>User,(user)=>user.skills)
-    user:User
+    @ManyToOne(()=>User,(user)=>user.skillsORspecializations)
+    userORcompany:User
 }

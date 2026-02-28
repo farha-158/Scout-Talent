@@ -3,6 +3,7 @@ export enum CandidateStatus {
     NEW='New',
     SCREENING='Screening',
     INTERVIEW = 'interview',
-    ACCEPTED = 'accepted',
+    OFFERED = 'Offered',
+    HIRED='Hired',
     REJECTED = 'rejected'
 }

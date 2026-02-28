@@ -16,7 +16,7 @@ import { CVModule } from "../CV/cv.module";
         UserModule,
         JwtModule,
         CVModule,
-        TypeOrmModule.forFeature([Job,JobApplicant])
+        TypeOrmModule.forFeature([ Job, JobApplicant])
     ],
     exports:[JobServices]
 })

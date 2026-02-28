@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common";
 import { SkillController } from "./skills.controller";
 import { SkillService } from "./skills.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { Skill } from "./skills.entity";
+import { SkillOrSpecializations } from "./skills.entity";
 import { UserModule } from "../Users/user.module";
 import { JwtModule } from "@nestjs/jwt";
 
@@ -12,7 +12,7 @@ import { JwtModule } from "@nestjs/jwt";
     imports:[
         UserModule,
         JwtModule,
-        TypeOrmModule.forFeature([Skill])
+        TypeOrmModule.forFeature([SkillOrSpecializations])
     ]
 })
 export class SkillModule{}

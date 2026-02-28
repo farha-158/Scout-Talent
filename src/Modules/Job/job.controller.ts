@@ -2,12 +2,15 @@ import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, U
 import { JobServices } from "./job.service";
 import { addJobDTO } from "./dto/addJob.dto";
 import { RoleUser } from "src/utils/Enums/user.enum";
-import { Roles } from "../Users/decorator/user_role.decorator";
-import { AuthGuard } from "../Users/guard/AuthUser.guard";
 import { updateJobDTO } from "./dto/updateJob.dto";
-import { currentUser } from "../Users/decorator/currentUser.decorator";
 import type { JwtPayloadType } from "src/utils/type";
 import { CandidateStatus } from "src/utils/Enums/candidateStatus.enum";
+import { applyJobDTO } from "./dto/applyJob.dto";
+import { Roles } from "../auth/decorator/user_role.decorator";
+import { AuthGuard } from "../auth/guards/AuthUser.guard";
+import { currentUser } from "../auth/decorator/currentUser.decorator";
+import { JobStatus, JobType, WorkMode } from "src/utils/Enums/job.enum";
+import { jobStatusDTO } from "./dto/statusJob.dto";
 
 @Controller()
 export class JobController{
@@ -21,23 +24,37 @@ export class JobController{
     @UseGuards(AuthGuard)
     public async CreateJob(
         @Body() body:addJobDTO, 
-        @currentUser() user:JwtPayloadType 
+        @currentUser() company:JwtPayloadType 
     ){
-        return await this.jobService.Addjob(body,user.id)
+        return await this.jobService.Addjob(body,company.id)
     }
 
     @Get('allJob')
+    @Roles(RoleUser.APPLICANT)
+    @UseGuards(AuthGuard)
     public async GetAllJobs(){
         return await this.jobService.getAllJob()
     }
 
-    @Get('recruiter/jobs')
+    @Get('company/jobs')
     @Roles(RoleUser.COMPANY)
     @UseGuards(AuthGuard)
     public async GetAllJobsByCompany(
-        @currentUser() user: JwtPayloadType
+        @currentUser() company: JwtPayloadType,
+        @Query('q') q?:JobStatus,
     ){
-        return await this.jobService.GetAllJobsByRecruiter(user.id)
+        return await this.jobService.GetAllJobsByCompany(company.id , q)
+    }
+
+    @Get('company/jobsApply')
+    @Roles(RoleUser.COMPANY)
+    @UseGuards(AuthGuard)
+    public async GetAllJobsByCompanyApply(
+        @currentUser() company: JwtPayloadType,
+        @Query('q') q?:string,
+        @Query('s') status?:CandidateStatus
+    ){
+        return await this.jobService.GetAllJobsByCompanyApply(company.id, q, status)
     }
 
     @Get('jobs/:id')
@@ -47,57 +64,102 @@ export class JobController{
         return await this.jobService.getJob(id)
     }
 
-    @Get('applyJob/:jobId/:cvId')
+    @Post('applyJob/:jobId/:cvId')
     @Roles(RoleUser.APPLICANT)
     @UseGuards(AuthGuard)
     public async applyJob(
         @currentUser() user:JwtPayloadType, 
         @Param('jobId',ParseIntPipe) jobId:number,
-        @Param('cvId',ParseIntPipe ) cvId:number
+        @Param('cvId',ParseIntPipe ) cvId:number,
+        @Body() body:applyJobDTO
     ){
-        return await this.jobService.applyJob(user.id ,jobId ,cvId)
+        return await this.jobService.applyJob(user.id ,jobId ,cvId,body)
     }
 
-    @Delete('recruiter/jobs/:id')
-    public async deleteJob(@Param('id',ParseIntPipe) id: number){
-        return await this.jobService.deleteJob(id)
+    @Delete('company/jobs/:id')
+    @Roles(RoleUser.COMPANY)
+    @UseGuards(AuthGuard)
+    public async deleteJob(
+        @currentUser() company:JwtPayloadType,
+        @Param('id',ParseIntPipe) id: number
+    ){
+        return await this.jobService.deleteJob( company.id , id )
     }
 
-    @Put('recruiter/jobs/:id')
+    @Put('company/jobs/:id')
+    @Roles(RoleUser.COMPANY)
+    @UseGuards(AuthGuard)
     public async updateJob(
+        @currentUser() company: JwtPayloadType,
         @Param('id',ParseIntPipe) id: number,
-        @Body() body:updateJobDTO
+        @Body() body: updateJobDTO
     ){
-        return await this.jobService.updateJob(id,body)
+        return await this.jobService.updateJob( company.id , id , body )
     }
 
-    @Get('screenCV/:jobId')
-    public async screenCV(@Param('jobId',ParseIntPipe) id: number){
-
-        return await this.jobService.screeningCV(id)
+    @Get('screenCV/:jobId/:userId')
+    @Roles(RoleUser.COMPANY)
+    @UseGuards(AuthGuard)
+    public async screenCV (
+        @currentUser() company : JwtPayloadType,
+        @Param( 'jobId' , ParseIntPipe ) jobId : number,
+        @Param( 'userId' , ParseIntPipe ) userId : number,
+    ){
+        return await this.jobService.screeningCV( company.id , jobId , userId )
     }
 
-    @Get('rejectedCV/:jobId')
-    public async rejectedCV(@Param('jobId',ParseIntPipe) id: number){
+    @Get('rejectedCV/:jobId/:userId')
+    @Roles(RoleUser.COMPANY)
+    @UseGuards(AuthGuard)
+    public async rejectedCV (
+        @currentUser() company : JwtPayloadType,
+        @Param('jobId',ParseIntPipe) jobId: number,
+        @Param('userId',ParseIntPipe) userId : number
+    ){
+        return await this.jobService.rejectCV( company.id , jobId , userId )
+    }
 
-        return await this.jobService.rejectCV(id)
+    @Get('hiredCV/:jobId/:userId')
+    @Roles(RoleUser.COMPANY)
+    @UseGuards(AuthGuard)
+    public async hiredCV (
+        @currentUser() company : JwtPayloadType,
+        @Param('jobId',ParseIntPipe) jobId: number,
+        @Param('userId',ParseIntPipe) userId : number
+    ){
+        return await this.jobService.hiredCV( company.id , jobId , userId )
     }
 
     @Get('applicantJobByApplicant')
     @Roles(RoleUser.APPLICANT)
     @UseGuards(AuthGuard)
-    public async applicantJobByApplicant(@currentUser() user:JwtPayloadType){
-        return await this.jobService.jobApplicantionByUser(user.id)
+    public async applicantJobByApplicant(
+        @currentUser() user:JwtPayloadType,
+        @Query('search') search?: string,
+        @Query('location') location?: string,
+        @Query('jobType') jobType?: JobType,
+        @Query('workMode') workMode?: WorkMode,
+
+    ){
+        return await this.jobService.jobApplicantionByUser(user.id , search ,location ,jobType , workMode)
     }
 
-    @Get('filter')
-    public async filterJob(@Query('q') q:string){
-        return await this.jobService.filterJobs(q)
+    @Get('company/dashboard-stats')
+    @Roles(RoleUser.COMPANY)
+    @UseGuards(AuthGuard)
+    public async dashboardStatistics (
+        @currentUser() company:JwtPayloadType
+    ){
+        return await this.jobService.dashboardStatisticsCompany(company.id)
+    } 
+    @Post('company/jobs/:jobId/status')
+    @Roles(RoleUser.COMPANY)
+    @UseGuards(AuthGuard)
+    public async jobStatus(
+        @currentUser() company:JwtPayloadType,
+        @Param("jobId" , ParseIntPipe ) jobId : number,
+        @Body() body : jobStatusDTO
+    ){
+        return await this.jobService.ChangeJobStatus(company.id , jobId , body )
     }
-
-    @Get('filterStatus')
-    public async filterJobByStatus(@Query('s') status:CandidateStatus){
-        return await this.jobService.filterJobByStatus(status)
-    }
-
 }

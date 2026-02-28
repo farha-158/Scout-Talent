@@ -21,7 +21,7 @@ export class CVService{
 
         await this.cvRepository.save(cv)
 
-        return {message:"cv upload successful"}
+        return {message:"cv upload successful" ,cvId:cv.id}
     }
 
     public async findCV(id:number){
