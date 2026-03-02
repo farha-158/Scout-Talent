@@ -21,7 +21,7 @@ export class updateUserDTO{
 
     @IsOptional()
     @ApiPropertyOptional()
-    linkesIn_profile:string
+    linkedIn_profile:string
 
     @IsOptional()
     @ApiPropertyOptional()
