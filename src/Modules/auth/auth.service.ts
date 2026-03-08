@@ -6,8 +6,8 @@ import { ConfigService } from "@nestjs/config";
 import { MailService } from "../Mail/mail.service";
 import { JwtService } from "@nestjs/jwt";
 import { registerDTO } from "./dto/register.dto";
-import bcrypt from 'bcrypt'
-import { randomBytes } from 'node:crypto'
+import bcrypt from "bcrypt";
+import { randomBytes } from "node:crypto";
 import { loginDTO } from "./dto/login.dto";
 import { JwtPayloadType } from "src/utils/type";
 import { forgetPasswordDTO } from "./dto/forget_password.dto";
@@ -16,229 +16,261 @@ import { StringValue } from "ms";
 import { resendEmailVerify } from "./dto/resendEmailVerify.dto";
 
 @Injectable()
-export class AuthService{
+export class AuthService {
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    private config: ConfigService,
+    private mailService: MailService,
+    private jwtService: JwtService,
+  ) {}
 
-    constructor(@InjectRepository(User) 
-        private userRepository : Repository<User>,
-        private config: ConfigService,
-        private mailService :MailService,
-        private jwtService:JwtService
-    ){}
+  /**
+   * user register
+   * @param dto name , email, password, role
+   * @returns message
+   */
+  public async register(dto: registerDTO) {
+    const {
+      name,
+      email,
+      password,
+      linkedIn_profile,
+      phone,
+      location,
+      job_title,
+      role,
+    } = dto;
 
-    /**
-     * user register 
-     * @param dto name , email, password, role
-     * @returns message
-     */
-    public async register(dto:registerDTO){
+    const user = await this.userRepository.findOne({ where: { email } });
 
-        const {name , email , password ,linkedIn_profile ,phone ,location ,job_title , role} = dto
+    if (user) throw new BadRequestException("This email is already registered");
 
-        const user = await this.userRepository.findOne( { where :{ email } } )
+    const saltOrRounds = 10;
+    const hash = await bcrypt.hash(password, saltOrRounds);
 
-        if(user) throw new BadRequestException('Email already in DB')
-        
-        const saltOrRounds = 10;
-        const hash = await bcrypt.hash(password, saltOrRounds);
+    const Suser = this.userRepository.create({
+      name,
+      email,
+      password: hash,
+      role,
+      phone,
+      linkedIn_profile,
+      location,
+      job_title,
+      verificationToken: randomBytes(32).toString("hex"),
+    });
 
-        const Suser = this.userRepository.create({
-            name , email , password:hash , role, phone,
-            linkedIn_profile, location, job_title,
-            verificationToken: randomBytes(32).toString('hex')
-        })
+    const newuser = await this.userRepository.save(Suser);
 
-        const newuser = await this.userRepository.save(Suser)
+    const link = `${this.config.get<string>("DOMIN")}/api/v1/auth/verify-email/${newuser.id}/${newuser.verificationToken}`;
 
-        const link = `${this.config.get<string>('DOMIN')}/api/v1/auth/verify-email/${newuser.id}/${newuser.verificationToken}`
+    await this.mailService.sendVerifyEmail(email, link);
 
-        await this.mailService.sendVerifyEmail(email,link)
+    return {
+      message: "Verification email sent successfully. Please check your inbox.",
+    };
+  }
 
-        return { message:'verification email has been send , please check your email' }
+  /**
+   * user login
+   * @param dto email , password
+   * @returns message
+   */
+  public async login(dto: loginDTO) {
+    const { email, password, rememberMe } = dto;
+
+    const user = await this.userRepository
+      .createQueryBuilder("user")
+      .addSelect("user.password")
+      .where("user.email = :email", { email })
+      .getOne();
+    if (!user) throw new BadRequestException("No account found with this email");
+
+    const ckpass = await bcrypt.compare(password, user.password);
+    if (!ckpass) throw new BadRequestException("Incorrect password");
+
+    if (!user.isAccountVerified) {
+      throw new BadRequestException("Please verify your email before logging in");
     }
+    const payload: JwtPayloadType = { id: user.id, role: user.role };
 
-    /**
-     * user login
-     * @param dto email , password
-     * @returns message
-     */
-    public async login( dto:loginDTO ) {
+    const accessToken = await this.jwtService.signAsync(payload);
 
-        const {email , password} = dto
+    const refreshExpires = rememberMe
+        ? this.config.get<string>('JWT_REFRESH_EXPIRES_IN')
+        : this.config.get<string>('JWT_REFRESH_EXPIRES_IN_SHORT');
 
-        const user = await this.userRepository
-            .createQueryBuilder('user')
-            .addSelect('user.password')
-            .where('user.email = :email', { email })
-            .getOne();
-        if(!user) throw new BadRequestException('Email not found in DB ')
+    const refreshToken = await this.jwtService.signAsync(payload, {
+      secret: this.config.get<string>("JWT_Refresh_SECRET"),
+      expiresIn:refreshExpires as StringValue
+    });
 
-        const ckpass= await bcrypt.compare(password,user.password)
-        if(!ckpass) throw new BadRequestException('password not correct')
-        
-        if( !user.isAccountVerified ) {
-            throw new BadRequestException('not verify your email')
-        }
-        const payload:JwtPayloadType = { id : user.id ,role : user.role }
+    const HrefreshToken = await bcrypt.hash(refreshToken, 10);
+    user.refreshToken = HrefreshToken;
 
-        const accessToken = await this.jwtService.signAsync( payload )
+    await this.userRepository.save(user);
 
-        const refreshToken = await this.jwtService.signAsync( payload,{
-            secret: this.config.get<string>('JWT_Refresh_SECRET'),
-            expiresIn: this.config.get<string>('JWT_Refresh_EXPIRES_IN') as StringValue
-        })
-        
-        const HrefreshToken = await bcrypt.hash(refreshToken,10)
-        user.refreshToken = HrefreshToken
+    return { message: "login successful", accessToken, refreshToken };
+  }
 
-        await this.userRepository.save(user)
+  public async resendEmailVerify(dto: resendEmailVerify) {
+    const { email } = dto;
 
-        return { message:'login successful', accessToken ,refreshToken}
-    }
+    const user = await this.userRepository
+      .createQueryBuilder("user")
+      .addSelect("user.verificationToken")
+      .where("user.email = :email", { email })
+      .getOne();
+ 
+    if (!user) throw new BadRequestException("No account found with this email");
 
-    public async resendEmailVerify (dto:resendEmailVerify){
+    if(user.isAccountVerified) return {
+      message: "Email is already verified",
+    };
+    const verificationToken = randomBytes(32).toString("hex");
 
-        const { email } = dto
+    user.verificationToken = verificationToken;
+    await this.userRepository.save(user);
 
-        const user = await this.userRepository
-            .createQueryBuilder('user')
-            .addSelect('user.verificationToken')
-            .where('user.email = :email', { email })
-            .getOne();
-        if(!user) throw new BadRequestException('Email not found in DB ')
+    const link = `${this.config.get<string>("DOMIN")}/api/v1/auth/verify-email/${user.id}/${user.verificationToken}`;
 
-        const verificationToken = randomBytes(32).toString('hex')
-        
-        user.verificationToken= verificationToken
-        await this.userRepository.save(user)
+    await this.mailService.sendVerifyEmail(user.email, link);
 
-        const link = `${this.config.get<string>('DOMIN')}/api/v1/auth/verify-email/${user.id}/${user.verificationToken}`
+    return {
+      message: "Verification email sent successfully. Please check your inbox.",
+    };
+  }
 
-        await this.mailService.sendVerifyEmail(user.email,link)
+  public async getAccessToken(refreshToken: string) {
+    const payload: JwtPayloadType = await this.jwtService.verifyAsync(
+      refreshToken,
+      {
+        secret: this.config.get<string>("JWT_Refresh_SECRET"),
+      },
+    );
 
-        return { message:'verification email has been send , please check your email' }
-    }
+    const user = await this.userRepository
+      .createQueryBuilder("user")
+      .addSelect("user.refreshToken")
+      .where("user.id = :id", { id: payload.id })
+      .getOne();
 
-    public async getAccessToken(refreshToken:string){
+    if (!user || !user.refreshToken)
+      throw new BadRequestException("Access denied");
 
-        const payload:JwtPayloadType = await this.jwtService.verifyAsync(refreshToken,{
-            secret:this.config.get<string>('JWT_Refresh_SECRET'),
-            
-        })
+    const isMatch = await bcrypt.compare(refreshToken, user.refreshToken);
+    if (!isMatch) throw new BadRequestException("Invalid refresh token");
 
-        const user= await this.userRepository
-            .createQueryBuilder('user')
-            .addSelect('user.refreshToken')
-            .where('user.id = :id', { id:payload.id })
-            .getOne()
+    const newAccessToken = await this.jwtService.signAsync({
+      id: user.id,
+      role: user.role,
+    });
 
-        if(!user || !user.refreshToken) throw new BadRequestException('Access denied')
+    return { accessToken: newAccessToken };
+  }
 
-        const isMatch= await bcrypt.compare(refreshToken , user.refreshToken)
-        if(!isMatch) throw new BadRequestException('Invalid refresh token')
+  public async logOut(id: number) {
 
-        const newAccessToken= await this.jwtService.signAsync({id:user.id,role:user.role})
+    const user = await this.userRepository.findOne({ where: { id } });
 
-        return {accessToken:newAccessToken}
-    }
+    if (!user) throw new BadRequestException("not found user");
 
-    public async logOut(id:number){
+    user.refreshToken = "";
+    await this.userRepository.save(user);
 
-        const user = await this.userRepository.findOne({where:{id}})
+    return true;
+  }
 
-        if(!user) throw new BadRequestException('not found user')
+  /**
+   * to verify user's email
+   * @param id user Id
+   * @param verificationToken
+   * @returns message
+   */
+  public async verifyEmail(id: number, verificationToken: string) {
 
-        user.refreshToken = ''
-        await this.userRepository.save(user)
+    const user = await this.userRepository
+      .createQueryBuilder("user")
+      .addSelect("user.verificationToken")
+      .where("user.id = :id", { id })
+      .getOne();
+    if (!user) throw new BadRequestException("user not found");
 
-        return true
-    }
+    if (user.verificationToken === null)
+      throw new BadRequestException("there is no verification token");
+    if (user.verificationToken !== verificationToken)
+      throw new BadRequestException(" invalid link");
 
-    /**
-     * to verify user's email
-     * @param id user Id
-     * @param verificationToken 
-     * @returns message
-     */
-    public async verifyEmail(id:number , verificationToken:string){
+    user.isAccountVerified = true;
+    user.verificationToken = "";
 
-        const user = await this.userRepository
-            .createQueryBuilder("user")
-            .addSelect("user.verificationToken")
-            .where("user.id = :id", { id })
-            .getOne();
-        if(!user) throw new BadRequestException('user not found')
-        
-        if(user.verificationToken === null) throw new BadRequestException('there is no verification token')
-        if(user.verificationToken !== verificationToken) throw new BadRequestException(' invalid link')
-    
-        user.isAccountVerified = true
-        user.verificationToken = ''
+    await this.userRepository.save(user);
 
-        await this.userRepository.save(user) 
+    return { message: "your email has been verify , you can log in now" };
+  }
 
-        return{message:'your email has been verify , you can log in now'}
+  /**
+   * user forget password
+   * @param dto email
+   * @returns message
+   */
+  public async forgetPassword(dto: forgetPasswordDTO) {
+    const { email } = dto;
 
-    }
+    const user = await this.userRepository
+      .createQueryBuilder("user")
+      .addSelect("user.resetPasswordToken")
+      .where("user.email = :email", { email })
+      .getOne();
 
-    /**
-     * user forget password
-     * @param dto email
-     * @returns message
-     */
-    public async forgetPassword(dto:forgetPasswordDTO){
-        const {email}=dto
+    if (!user) throw new BadRequestException("email not in DB");
 
-        const user= await this.userRepository
-            .createQueryBuilder("user")
-            .addSelect("user.resetPasswordToken")
-            .where("user.email = :email", { email })
-            .getOne();
+    user.resetPasswordToken = randomBytes(32).toString("hex");
 
-        if(!user) throw new BadRequestException('email not in DB')
+    await this.userRepository.save(user);
 
-        user.resetPasswordToken= randomBytes(32).toString('hex')
+    const link = `${this.config.get<string>("DOMIN")}/api/v1/auth/reset_password/${user.id}/${user.resetPasswordToken}`;
 
-        await this.userRepository.save(user)
+    await this.mailService.sendResetPassword(email, link);
 
-        const link = `${this.config.get<string>('DOMIN')}/api/v1/auth/reset_password/${user.id}/${user.resetPasswordToken}`
-        
-        await this.mailService.sendResetPassword(email,link)
+    return { message: "check your email , click to link" };
+  }
 
-        return{message:'check your email , click to link'}
-    }
+  /**
+   * update user's password
+   * @param dto new password
+   * @param id user id
+   * @param resetPasswordToken
+   * @returns message
+   */
+  public async resetPassword(
+    dto: resetPasswordDTO,
+    id: number,
+    resetPasswordToken: string,
+  ) {
+    const { newPassword } = dto;
+    const user = await this.userRepository
+      .createQueryBuilder("user")
+      .addSelect("user.resetPasswordToken")
+      .where("user.id = :id", { id })
+      .getOne();
 
-    /**
-     * update user's password
-     * @param dto new password
-     * @param id user id
-     * @param resetPasswordToken 
-     * @returns message
-     */
-    public async resetPassword(
-        dto:resetPasswordDTO , 
-        id:number, 
-        resetPasswordToken:string
-    ){
-        const {newPassword} = dto
-        const user= await this.userRepository
-            .createQueryBuilder("user")
-            .addSelect("user.resetPasswordToken")
-            .where("user.id = :id", { id })
-            .getOne();
+    if (!user) throw new BadRequestException("please try again");
 
-        if (!user) throw new BadRequestException('please try again')
-        
-        if(user.resetPasswordToken==='') throw new BadRequestException('there is no verification token')
+    if (user.resetPasswordToken === "")
+      throw new BadRequestException("there is no verification token");
 
-        if(user.resetPasswordToken!== resetPasswordToken) throw new BadRequestException('invalid link')
+    if (user.resetPasswordToken !== resetPasswordToken)
+      throw new BadRequestException("invalid link");
 
-        const hashPassword= await bcrypt.hash(newPassword,10)
+    const hashPassword = await bcrypt.hash(newPassword, 10);
 
-        user.password=hashPassword
-        user.resetPasswordToken=''
+    user.password = hashPassword;
+    user.resetPasswordToken = "";
 
-        await this.userRepository.save(user)
+    await this.userRepository.save(user);
 
-        return {message :'password update successful'}
-    }
+    return { message: "password update successful" };
+  }
 }
