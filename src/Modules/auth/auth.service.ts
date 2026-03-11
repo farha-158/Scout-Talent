@@ -85,25 +85,30 @@ export class AuthService {
       .addSelect("user.password")
       .where("user.email = :email", { email })
       .getOne();
-    if (!user) throw new BadRequestException("No account found with this email");
+    if (!user)
+      throw new BadRequestException("No account found with this email");
 
     const ckpass = await bcrypt.compare(password, user.password);
     if (!ckpass) throw new BadRequestException("Incorrect password");
 
     if (!user.isAccountVerified) {
-      throw new BadRequestException("Please verify your email before logging in");
+      throw new BadRequestException(
+        "Please verify your email before logging in",
+      );
     }
     const payload: JwtPayloadType = { id: user.id, role: user.role };
 
     const accessToken = await this.jwtService.signAsync(payload);
 
     const refreshExpires = rememberMe
-        ? this.config.get<string>('JWT_REFRESH_EXPIRES_IN')as StringValue
-        : this.config.get<string>('JWT_REFRESH_EXPIRES_IN_SHORT') as StringValue;
+      ? (this.config.get<string>("JWT_REFRESH_EXPIRES_IN") as StringValue)
+      : (this.config.get<string>(
+          "JWT_REFRESH_EXPIRES_IN_SHORT",
+        ) as StringValue);
 
     const refreshToken = await this.jwtService.signAsync(payload, {
       secret: this.config.get<string>("JWT_Refresh_SECRET"),
-      expiresIn:refreshExpires 
+      expiresIn: refreshExpires,
     });
 
     const HrefreshToken = await bcrypt.hash(refreshToken, 10);
@@ -122,12 +127,14 @@ export class AuthService {
       .addSelect("user.verificationToken")
       .where("user.email = :email", { email })
       .getOne();
- 
-    if (!user) throw new BadRequestException("No account found with this email");
 
-    if(user.isAccountVerified) return {
-      message: "Email is already verified",
-    };
+    if (!user)
+      throw new BadRequestException("No account found with this email");
+
+    if (user.isAccountVerified)
+      return {
+        message: "Email is already verified",
+      };
     const verificationToken = randomBytes(32).toString("hex");
 
     user.verificationToken = verificationToken;
@@ -171,7 +178,6 @@ export class AuthService {
   }
 
   public async logOut(id: number) {
-
     const user = await this.userRepository.findOne({ where: { id } });
 
     if (!user) throw new BadRequestException("not found user");
@@ -189,7 +195,6 @@ export class AuthService {
    * @returns message
    */
   public async verifyEmail(id: number, verificationToken: string) {
-
     const user = await this.userRepository
       .createQueryBuilder("user")
       .addSelect("user.verificationToken")
