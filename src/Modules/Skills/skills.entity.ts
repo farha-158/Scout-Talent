@@ -5,8 +5,8 @@ import { User } from "../Users/user.entity";
 @Entity({name:'skills'})
 export class SkillOrSpecializations{
 
-    @PrimaryGeneratedColumn()
-    id:number
+    @PrimaryGeneratedColumn('uuid')
+    id:string
 
     @Column()
     name:string

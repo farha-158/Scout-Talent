@@ -15,7 +15,7 @@ export class SkillService{
 
     ){}
 
-    public async addSkill(dto:addSkillDTO ,Id:number){
+    public async addSkill(dto:addSkillDTO ,Id:string){
 
         const {name} = dto
 
@@ -32,7 +32,7 @@ export class SkillService{
         return {message:'add successful'}
     }
 
-    public async deleteSkill(id:number , userId : number){
+    public async deleteSkill(id:string , userId : string){
 
         const skill = await this.skillRepository.findOne({
             where:{

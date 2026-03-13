@@ -11,7 +11,7 @@ export class CVService{
 
     ){}
 
-    public async uploadCV(userId:number,fileUrl:string){
+    public async uploadCV(userId:string,fileUrl:string){
 
         const user= await this.userService.findUser(userId)
 
@@ -24,7 +24,7 @@ export class CVService{
         return {message:"cv upload successful" ,cvId:cv.id}
     }
 
-    public async findCV(id:number){
+    public async findCV(id:string){
         
         const cv =await this.cvRepository.findOne({where:{id}})
 

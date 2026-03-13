@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from "@nestjs/common";
 import { JobServices } from "./job.service";
 import { addJobDTO } from "./dto/addJob.dto";
 import { RoleUser } from "src/utils/Enums/user.enum";
@@ -42,7 +42,7 @@ export class JobController{
 
     @Get('jobs/:id')
     public async GetJob(
-        @Param('id' , ParseIntPipe) id: number
+        @Param('id') id: string
     ){
         const data = await this.jobService.getJob(id)
         return {data}
@@ -54,8 +54,8 @@ export class JobController{
     @ApiSecurity('bearer')
     public async applyJob(
         @currentUser() user:JwtPayloadType, 
-        @Param('jobId',ParseIntPipe) jobId:number,
-        @Param('cvId',ParseIntPipe ) cvId:number,
+        @Param('jobId') jobId:string,
+        @Param('cvId') cvId:string,
         @Body() body:applyJobDTO
     ){
         const data= await this.jobService.applyJob(user.id ,jobId ,cvId,body)
@@ -68,7 +68,7 @@ export class JobController{
     @ApiSecurity('bearer')
     public async deleteJob(
         @currentUser() company:JwtPayloadType,
-        @Param('id',ParseIntPipe) id: number
+        @Param('id') id: string
     ){
         const data = await this.jobService.deleteJob( company.id , id )
         return {data}
@@ -81,7 +81,7 @@ export class JobController{
     @ApiBody({ type : updateJobDTO })
     public async updateJob(
         @currentUser() company: JwtPayloadType,
-        @Param('id',ParseIntPipe) id: number,
+        @Param('id') id: string,
         @Body() body: updateJobDTO
     ){
         const data = await this.jobService.updateJob( company.id , id , body )
@@ -94,8 +94,8 @@ export class JobController{
     @ApiSecurity('bearer')
     public async screenCV (
         @currentUser() company : JwtPayloadType,
-        @Param( 'jobId' , ParseIntPipe ) jobId : number,
-        @Param( 'userId' , ParseIntPipe ) userId : number,
+        @Param( 'jobId' ) jobId : string,
+        @Param( 'userId' ) userId : string,
     ){
         const data = await this.jobService.screeningCV( company.id , jobId , userId )
         return {data}
@@ -107,8 +107,8 @@ export class JobController{
     @ApiSecurity('bearer')
     public async rejectedCV (
         @currentUser() company : JwtPayloadType,
-        @Param('jobId',ParseIntPipe) jobId: number,
-        @Param('userId',ParseIntPipe) userId : number
+        @Param('jobId') jobId: string,
+        @Param('userId') userId : string
     ){
         const data = await this.jobService.rejectCV( company.id , jobId , userId )
         return {data}
@@ -120,8 +120,8 @@ export class JobController{
     @ApiSecurity('bearer')
     public async hiredCV (
         @currentUser() company : JwtPayloadType,
-        @Param('jobId',ParseIntPipe) jobId: number,
-        @Param('userId',ParseIntPipe) userId : number
+        @Param('jobId') jobId: string,
+        @Param('userId') userId : string
     ){
         const data = await this.jobService.hiredCV( company.id , jobId , userId )
         return {data}
@@ -133,7 +133,7 @@ export class JobController{
     @ApiSecurity('bearer')
     public async jobStatusChanging(
         @currentUser() company:JwtPayloadType,
-        @Param("jobId" , ParseIntPipe ) jobId : number,
+        @Param("jobId") jobId : string,
         @Body() body : jobStatusDTO
     ){
         const data = await this.jobService.ChangeJobStatus(company.id , jobId , body )

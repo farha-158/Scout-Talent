@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Param, ParseIntPipe, Post, Put, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Param, Post, Put, UseGuards } from "@nestjs/common";
 import { ExperienceService } from "./experience.service";
 import { RoleUser } from "src/utils/Enums/user.enum";
 import { addExperienceDTO } from "./dto/addExperience.dto";
@@ -35,7 +35,7 @@ export class ExperienceController{
     @ApiSecurity('bearer')
     public async updateExperience(
         @Body() body:updateExperienceDTO ,
-        @Param('id' , ParseIntPipe) id:number
+        @Param('id') id:string
     ){
         const data = await this.experienceService.updateExperience(body,id)
         return {data}
@@ -45,7 +45,7 @@ export class ExperienceController{
     @Roles(RoleUser.APPLICANT)
     @UseGuards(AuthGuard)
     @ApiSecurity('bearer')
-    public async deleteExperience(@Param('id' , ParseIntPipe) id:number){
+    public async deleteExperience(@Param('id') id:string){
         const data = await this.experienceService.deleteExperience(id)
         return {data}
     }

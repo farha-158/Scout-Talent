@@ -9,8 +9,8 @@ import { Experience } from "../Experience/experience.entity";
 
 @Entity({name:'users'})
 export class User{
-    @PrimaryGeneratedColumn()
-    id:number
+    @PrimaryGeneratedColumn('uuid')
+    id:string
 
     @Column()
     name:string
@@ -21,16 +21,16 @@ export class User{
     @Column({select: false})
     password:string
 
-    @Column()
+    @Column({nullable:true})
     phone:string
 
-    @Column()
+    @Column({nullable:true})
     job_title:string
 
-    @Column()
+    @Column({nullable:true})
     location:string
 
-    @Column()
+    @Column({nullable:true})
     linkedIn_profile:string
 
     @Column({type:'enum',enum:RoleUser ,default:RoleUser.APPLICANT})

@@ -14,14 +14,14 @@ export class UserService{
         @InjectRepository(JobApplicant) private jobApplicantRepository : Repository<JobApplicant>
     ){}
 
-    public async findUser(id:number){
+    public async findUser(id:string){
 
         const user= await this.userRepository.findOne({ where :{ id } })
 
         return user
     }
 
-    public async basicInformation(id:number){
+    public async basicInformation(id:string){
         
         const user= await this.userRepository.findOne({ 
             where :{ id } ,
@@ -31,7 +31,7 @@ export class UserService{
         return user
     }
 
-    public async updateProfile(dto:updateUserDTO , id:number){
+    public async updateProfile(dto:updateUserDTO , id:string){
 
         const user= await this.userRepository.findOne({ where :{ id } })
 
@@ -42,7 +42,7 @@ export class UserService{
         return true
     }
 
-    public async addorupdateAbout(dto:updateoraddAboutDTO , id : number){
+    public async addorupdateAbout(dto:updateoraddAboutDTO , id : string){
 
         const company = await this.userRepository
             .createQueryBuilder("company")
@@ -64,7 +64,7 @@ export class UserService{
 
 
 
-    public async profileCompleteUser(id:number){
+    public async profileCompleteUser(id:string){
         const user= await this.userRepository.findOne({
             where:{id}
         })
@@ -90,7 +90,7 @@ export class UserService{
         }
     }
 
-    public async dashboardStatisticsUser(id:number){
+    public async dashboardStatisticsUser(id:string){
 
         const user= await this.userRepository.findOne({
             where:{id}
@@ -128,7 +128,7 @@ export class UserService{
         }
     }
 
-    public async profileCompleteCompany(id:number){
+    public async profileCompleteCompany(id:string){
         const company= await this.userRepository.findOne({
             where:{id}
         })

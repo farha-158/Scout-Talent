@@ -4,8 +4,8 @@ import { CURRENT_TIMESTAMP } from "src/utils/Constant/constant";
 import { User } from "../Users/user.entity";
 @Entity({name:"experience"})
 export class Experience{
-    @PrimaryGeneratedColumn()
-    id:number
+    @PrimaryGeneratedColumn('uuid')
+    id:string
     
     @Column()
     title:string

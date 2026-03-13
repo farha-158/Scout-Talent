@@ -15,7 +15,7 @@ export class ExperienceService{
         private userService:UserService
     ){}
 
-    public async addExperience(dto:addExperienceDTO,userId:number) {
+    public async addExperience(dto:addExperienceDTO,userId:string) {
 
         const { title, description, startDate, endDate, company } = dto
 
@@ -31,7 +31,7 @@ export class ExperienceService{
         return { message: 'add experience successful'}
     }
 
-    public async updateExperience(dto:updateExperienceDTO,id:number) {
+    public async updateExperience(dto:updateExperienceDTO,id:string) {
 
         const experience= await this.experienceRepository.findOne({where:{id}})
 
@@ -42,7 +42,7 @@ export class ExperienceService{
         return { message: 'update experience successful'}
     }
 
-    public async deleteExperience(id:number) {
+    public async deleteExperience(id:string) {
 
         const experience= await this.experienceRepository.findOne({where:{id}})
 

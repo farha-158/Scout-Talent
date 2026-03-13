@@ -6,8 +6,8 @@ import { JobApplicant } from "./job_applicant.entity";
 
 @Entity({name:'jobs'})
 export class Job{
-    @PrimaryGeneratedColumn()
-    id: number;
+    @PrimaryGeneratedColumn('uuid')
+    id: string;
 
     @Column()
     title: string;

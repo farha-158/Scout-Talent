@@ -5,8 +5,8 @@ import { User } from "../Users/user.entity";
 @Entity({name:'CV'})
 export class CV{
     
-    @PrimaryGeneratedColumn()
-    id:number
+    @PrimaryGeneratedColumn('uuid')
+    id:string
 
     @Column({nullable:false})
     fileUrl:string

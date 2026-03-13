@@ -27,7 +27,7 @@ export class JobServices{
      * @param recruiterId 
      * @returns messsage
      */
-    public async Addjob(dto:addJobDTO, companyId : number){
+    public async Addjob(dto:addJobDTO, companyId : string){
 
         const {
             title , description , 
@@ -65,7 +65,7 @@ export class JobServices{
         return jobs
     }
 
-    public async GetAllJobsByCompany(companyId:number,q?:JobStatus){
+    public async GetAllJobsByCompany(companyId:string,q?:JobStatus){
 
         const company= await this.userService.findUser(companyId)
 
@@ -82,7 +82,7 @@ export class JobServices{
         return  await jobs.getMany()
     }
 
-    public async GetAllJobsByCompanyApply(companyId:number,q?:string, status?:string){
+    public async GetAllJobsByCompanyApply(companyId:string,q?:string, status?:string){
 
         const company= await this.userService.findUser(companyId)
 
@@ -117,7 +117,7 @@ export class JobServices{
      * @param id 
      * @returns job
      */
-    public async getJob(id:number){
+    public async getJob(id:string){
 
         const job=await this.jobRepository.findOne({where:{id}})
 
@@ -127,7 +127,7 @@ export class JobServices{
         return job
     }
 
-    public async updateJob( companyId:number , id:number , dto:updateJobDTO ){
+    public async updateJob( companyId:string , id:string , dto:updateJobDTO ){
         const job=await this.jobRepository.findOne({
             where:{
                 id,
@@ -151,7 +151,7 @@ export class JobServices{
      * @param id 
      * @returns message
      */
-    public async deleteJob( companyId : number ,id : number){
+    public async deleteJob( companyId : string ,id : string){
 
         const job=await this.jobRepository.findOne({
             where:{
@@ -178,7 +178,7 @@ export class JobServices{
      * @param jobId job
      * @returns message
      */
-    public async applyJob(applicantId:number,jobId:number, cvId:number , dto:applyJobDTO){
+    public async applyJob(applicantId:string,jobId:string, cvId:string , dto:applyJobDTO){
 
         const user = await this.userService.findUser(applicantId)
         if(!user) throw new BadRequestException('please try again')
@@ -198,7 +198,7 @@ export class JobServices{
         return {message: 'application the job successful'}
     }
 
-    public async screeningCV(companyId : number , jobId : number , userId : number){
+    public async screeningCV(companyId : string , jobId : string , userId : string){
 
         const jobApplicantion = await this.jobApplicantRepository.findOne({
             where : {
@@ -218,7 +218,7 @@ export class JobServices{
         return {message:'convert cadidate status to screening successful'}
     }
 
-    public async rejectCV( companyId : number, jobId : number, userId : number ){
+    public async rejectCV( companyId : string, jobId : string, userId : string ){
 
         const jobApplicantion = await this.jobApplicantRepository.findOne({
             where : {
@@ -237,7 +237,7 @@ export class JobServices{
         return {message:'convert cadidate status to rejected successful'}
     }
 
-    public async hiredCV(companyId : number, jobId : number, userId : number){
+    public async hiredCV(companyId : string, jobId : string, userId : string){
 
         const jobApplicantion = await this.jobApplicantRepository.findOne({
             where : {
@@ -259,7 +259,7 @@ export class JobServices{
     }
 
     public async jobApplicantionByUser(
-        userId:number , search?:string ,
+        userId:string , search?:string ,
         location?:string ,jobType?:JobType , workMode?:WorkMode
     ){
 
@@ -287,7 +287,7 @@ export class JobServices{
         return jobsApply.getMany()
     }
 
-    public async dashboardStatisticsCompany(companyId:number){
+    public async dashboardStatisticsCompany(companyId:string){
 
         const company = await this.userService.findUser(companyId) 
 
@@ -363,7 +363,7 @@ export class JobServices{
         }
     }
 
-    public async ChangeJobStatus(companyId:number , jobId:number , dto : jobStatusDTO){
+    public async ChangeJobStatus(companyId:string , jobId:string , dto : jobStatusDTO){
 
         const job = await this.jobRepository.findOne({
             where:{

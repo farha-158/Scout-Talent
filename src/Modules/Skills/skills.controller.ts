@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Param, ParseIntPipe, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Param, Post, UseGuards } from "@nestjs/common";
 import { SkillService } from "./skills.service";
 import { RoleUser } from "src/utils/Enums/user.enum";
 import type { JwtPayloadType } from "src/utils/type";
@@ -33,7 +33,7 @@ export class SkillController{
     @ApiSecurity('bearer')
     public async deleteSkill(
         @currentUser() user:JwtPayloadType,
-        @Param('id',ParseIntPipe) id:number
+        @Param('id') id:string
     ){
         const data = await this.skillService.deleteSkill(id , user.id)
         return {data}

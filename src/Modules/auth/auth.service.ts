@@ -3,7 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "../Users/user.entity";
 import { Repository } from "typeorm";
 import { ConfigService } from "@nestjs/config";
-import { MailService } from "../Mail/mail.service";
+import { MailService } from "../../utils/Mail/mail.service";
 import { JwtService } from "@nestjs/jwt";
 import { registerDTO } from "./dto/register.dto";
 import bcrypt from "bcrypt";
@@ -14,6 +14,8 @@ import { forgetPasswordDTO } from "./dto/forget_password.dto";
 import { resetPasswordDTO } from "./dto/reset_password.dto";
 import { StringValue } from "ms";
 import { resendEmailVerify } from "./dto/resendEmailVerify.dto";
+import { RoleUser } from "src/utils/Enums/user.enum";
+import { userRoleDTO } from "./dto/userRole.dto";
 
 @Injectable()
 export class AuthService {
@@ -177,7 +179,7 @@ export class AuthService {
     return { accessToken: newAccessToken };
   }
 
-  public async logOut(id: number) {
+  public async logOut(id: string) {
     const user = await this.userRepository.findOne({ where: { id } });
 
     if (!user) throw new BadRequestException("not found user");
@@ -194,7 +196,7 @@ export class AuthService {
    * @param verificationToken
    * @returns message
    */
-  public async verifyEmail(id: number, verificationToken: string) {
+  public async verifyEmail(id: string, verificationToken: string) {
     const user = await this.userRepository
       .createQueryBuilder("user")
       .addSelect("user.verificationToken")
@@ -251,7 +253,7 @@ export class AuthService {
    */
   public async resetPassword(
     dto: resetPasswordDTO,
-    id: number,
+    id: string,
     resetPasswordToken: string,
   ) {
     const { newPassword } = dto;
@@ -277,5 +279,83 @@ export class AuthService {
     await this.userRepository.save(user);
 
     return { message: "password update successful" };
+  }
+
+  public async GoogleAuth(email: string, name: string) {
+    let user = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    if (!user) {
+      const password = randomBytes(12).toString("hex");
+
+      const hash = await bcrypt.hash(password, 10);
+
+      user = this.userRepository.create({
+        name,
+        email,
+        password: hash,
+        isAccountVerified: true,
+        role: RoleUser.APPLICANT,
+      });
+
+      await this.userRepository.save(user);
+
+      return {
+          message: "Account created successfully, please choose your role",
+          needRole: true,
+          userId: user.id,
+      };
+    }
+    const payload: JwtPayloadType = { id: user.id, role: user.role };
+
+    const accessToken = await this.jwtService.signAsync(payload);
+
+    const refreshToken = await this.jwtService.signAsync(payload, {
+      secret: this.config.get<string>("JWT_Refresh_SECRET"),
+      expiresIn: this.config.get<string>(
+        "JWT_REFRESH_EXPIRES_IN",
+      ) as StringValue,
+    });
+
+    const HrefreshToken = await bcrypt.hash(refreshToken, 10);
+
+    user.refreshToken = HrefreshToken;
+    user.isAccountVerified = true;
+
+    await this.userRepository.save(user);
+
+    return {
+      message: "login successful",
+      needRole: false,
+      token: { accessToken, refreshToken },
+    };
+  }
+
+  public async SelectRoleuser(dto: userRoleDTO, id: string) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) throw new BadRequestException("no user found , try again");
+
+    const { role } = dto;
+
+    const payload: JwtPayloadType = { id, role };
+
+    const accessToken = await this.jwtService.signAsync(payload);
+
+    const refreshToken = await this.jwtService.signAsync(payload, {
+      secret: this.config.get<string>("JWT_Refresh_SECRET"),
+      expiresIn: this.config.get<string>(
+        "JWT_REFRESH_EXPIRES_IN",
+      ) as StringValue,
+    });
+
+    const HrefreshToken = await bcrypt.hash(refreshToken, 10);
+
+    user.role = role;
+    user.refreshToken = HrefreshToken;
+
+    await this.userRepository.save(user);
+
+    return { message: "login successful", accessToken, refreshToken };
   }
 }
