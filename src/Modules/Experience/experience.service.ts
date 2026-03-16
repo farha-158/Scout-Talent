@@ -6,50 +6,55 @@ import { addExperienceDTO } from "./dto/addExperience.dto";
 import { UserService } from "../Users/user.service";
 import { updateExperienceDTO } from "./dto/updateExperience.dto";
 
-
 @Injectable()
-export class ExperienceService{
+export class ExperienceService {
+  constructor(
+    @InjectRepository(Experience)
+    private experienceRepository: Repository<Experience>,
+    private userService: UserService,
+  ) {}
 
-    constructor(
-        @InjectRepository(Experience) private experienceRepository:Repository<Experience>,
-        private userService:UserService
-    ){}
+  public async addExperience(dto: addExperienceDTO, userId: string) {
+    const { title, description, startDate, endDate, company } = dto;
 
-    public async addExperience(dto:addExperienceDTO,userId:string) {
+    const user = await this.userService.findUser(userId);
+    if (!user) throw new BadRequestException("not user found");
 
-        const { title, description, startDate, endDate, company } = dto
+    const nExper = this.experienceRepository.create({
+      title,
+      description,
+      startDate,
+      endDate,
+      company,
+      user,
+    });
 
-        const user = await this.userService.findUser(userId)
-        if(!user)throw new BadRequestException('not user found')
+    await this.experienceRepository.save(nExper);
 
-        const nExper= this.experienceRepository.create({ 
-            title, description, startDate, endDate, company, user
-        })
+    return { message: "add experience successful" };
+  }
 
-        await this.experienceRepository.save(nExper)
+  public async updateExperience(dto: updateExperienceDTO, id: string) {
+    const experience = await this.experienceRepository.findOne({
+      where: { id },
+    });
 
-        return { message: 'add experience successful'}
-    }
+    if (!experience) throw new BadRequestException("no experience found");
 
-    public async updateExperience(dto:updateExperienceDTO,id:string) {
+    await this.experienceRepository.update(id, dto);
 
-        const experience= await this.experienceRepository.findOne({where:{id}})
+    return { message: "update experience successful" };
+  }
 
-        if(!experience) throw new BadRequestException('no experience found')
+  public async deleteExperience(id: string) {
+    const experience = await this.experienceRepository.findOne({
+      where: { id },
+    });
 
-        await this.experienceRepository.update(id,dto)
+    if (!experience) throw new BadRequestException("no experience found");
 
-        return { message: 'update experience successful'}
-    }
+    await this.experienceRepository.delete(id);
 
-    public async deleteExperience(id:string) {
-
-        const experience= await this.experienceRepository.findOne({where:{id}})
-
-        if(!experience) throw new BadRequestException('no experience found')
-
-        await this.experienceRepository.delete(id)
-
-        return { message: 'delete experience successful'}
-    }
+    return { message: "delete experience successful" };
+  }
 }

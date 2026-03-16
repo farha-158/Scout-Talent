@@ -5,47 +5,41 @@ import { addSkillDTO } from "./dto/addSkill.dto";
 import { UserService } from "../Users/user.service";
 import { SkillOrSpecializations } from "./skills.entity";
 
-
 @Injectable()
-export class SkillService{
+export class SkillService {
+  constructor(
+    @InjectRepository(SkillOrSpecializations)
+    private skillRepository: Repository<SkillOrSpecializations>,
+    private userService: UserService,
+  ) {}
 
-    constructor(@InjectRepository(SkillOrSpecializations) 
-    private skillRepository : Repository<SkillOrSpecializations>,
-        private userService:UserService
+  public async addSkill(dto: addSkillDTO, Id: string) {
+    const { name } = dto;
 
-    ){}
+    const user = await this.userService.findUser(Id);
+    if (!user) throw new BadRequestException("not user found");
 
-    public async addSkill(dto:addSkillDTO ,Id:string){
+    const skill = await this.skillRepository.findOne({ where: { name } });
+    if (skill)
+      throw new BadRequestException("this name already in your information");
 
-        const {name} = dto
+    const NSkill = this.skillRepository.create({ name, userORcompany: user });
 
-        const user = await this.userService.findUser(Id)
-        if(!user)throw new BadRequestException('not user found')
+    await this.skillRepository.save(NSkill);
 
-        const skill = await this.skillRepository.findOne({where:{name}})
-        if(skill) throw new BadRequestException('this name already in your information')
+    return { message: "add successful" };
+  }
 
-        const NSkill=this.skillRepository.create({name ,userORcompany:user})
+  public async deleteSkill(id: string, userId: string) {
+    const result = await this.skillRepository.delete({
+      id,
+      userORcompany: { id: userId },
+    });
 
-        await this.skillRepository.save(NSkill)
-
-        return {message:'add successful'}
+    if (result.affected === 0) {
+      throw new BadRequestException("Skill not found");
     }
 
-    public async deleteSkill(id:string , userId : string){
-
-        const skill = await this.skillRepository.findOne({
-            where:{
-                id,
-                userORcompany:{ id : userId }
-            }
-        })
-
-        if(!skill) throw new BadRequestException('no found ')
-
-        await this.skillRepository.remove(skill)
-
-        return {message:'delete successful'}
-    }
-
+    return { message: "delete successful" };
+  }
 }

@@ -121,7 +121,7 @@ export class AuthService {
 
     const u = await this.userRepository
       .createQueryBuilder("user")
-      .select(["user.id", "user.name", "user.email"])
+      .select(["user.id", "user.name", "user.role"])
       .where("user.id = :id", { id: user.id })
       .getOne();
 

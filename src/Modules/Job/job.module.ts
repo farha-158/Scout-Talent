@@ -8,6 +8,9 @@ import { UserModule } from "../Users/user.module";
 import { JwtModule } from "@nestjs/jwt";
 import { CVModule } from "../CV/cv.module";
 import { CandidateController } from "./candidate.controller";
+import { HiredDetails } from "./Hired_Details.entity";
+import { Interview } from "./interviews.entity";
+import { JobOffer } from "./jobOffer.entity";
 
 
 @Module({
@@ -15,7 +18,7 @@ import { CandidateController } from "./candidate.controller";
         forwardRef(()=>UserModule),
         JwtModule,
         CVModule,
-        TypeOrmModule.forFeature([ Job, JobApplicant])
+        TypeOrmModule.forFeature([ Job, JobApplicant, HiredDetails ,Interview ,JobOffer])
     ],
     controllers:[JobController,CandidateController],
     providers:[JobServices],

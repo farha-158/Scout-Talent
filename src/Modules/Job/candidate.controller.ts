@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
 import { JobServices } from "./job.service";
 import { Roles } from "src/Shared/decorator/user_role.decorator";
 import { RoleUser } from "src/Shared/Enums/user.enum";
@@ -7,6 +7,7 @@ import { CandidateStatus } from "src/Shared/Enums/candidateStatus.enum";
 import { currentUser } from "src/Shared/decorator/currentUser.decorator";
 import type { JwtPayloadType } from "src/Shared/types/JwtPayloadType";
 import { AuthGuard } from "../auth/guards/AuthUser.guard";
+import { HiredDTO } from "./dto/hired.dto";
 
 @Controller("candidate")
 export class CandidateController {
@@ -31,42 +32,40 @@ export class CandidateController {
     return { data };
   }
 
-  @Get("screenCV/:jobId/:userId")
+  @Get("screening/:id")
   @Roles(RoleUser.COMPANY)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
   public async screenCV(
     @currentUser() company: JwtPayloadType,
-    @Param("jobId") jobId: string,
-    @Param("userId") userId: string,
+    @Param("id") id: string,
   ) {
-    const data = await this.jobService.screeningCV(company.id, jobId, userId);
+    const data = await this.jobService.screeningCV(company.id,id);
     return { data };
   }
 
-  @Get("rejectedCV/:jobId/:userId")
+  @Get("reject/:id")
   @Roles(RoleUser.COMPANY)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
   public async rejectedCV(
     @currentUser() company: JwtPayloadType,
-    @Param("jobId") jobId: string,
-    @Param("userId") userId: string,
+    @Param("id") id: string,
   ) {
-    const data = await this.jobService.rejectCV(company.id, jobId, userId);
+    const data = await this.jobService.rejectCV(company.id, id);
     return { data };
   }
 
-  @Get("hiredCV/:jobId/:userId")
+  @Get("hire/:id")
   @Roles(RoleUser.COMPANY)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
   public async hiredCV(
     @currentUser() company: JwtPayloadType,
-    @Param("jobId") jobId: string,
-    @Param("userId") userId: string,
+    @Param("id") id: string,
+    @Body() body:HiredDTO
   ) {
-    const data = await this.jobService.hiredCV(company.id, jobId, userId);
+    const data = await this.jobService.hiredCV(company.id, id ,body);
     return { data };
   }
 

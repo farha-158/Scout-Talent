@@ -12,12 +12,16 @@ import { applyJobDTO } from "./dto/applyJob.dto";
 import { Brackets } from "typeorm";
 import { JobStatus, JobType, WorkMode } from "src/Shared/Enums/job.enum";
 import { jobStatusDTO } from "./dto/statusJob.dto";
+import { HiredDetails } from "./Hired_Details.entity";
+import { HiredDTO } from "./dto/hired.dto";
 @Injectable()
 export class JobServices {
   constructor(
     @InjectRepository(Job) private jobRepository: Repository<Job>,
     @InjectRepository(JobApplicant)
     private jobApplicantRepository: Repository<JobApplicant>,
+    @InjectRepository(HiredDetails)
+    private hiredRepository: Repository<HiredDetails>,
     private userService: UserService,
     private cvService: CVService,
   ) {}
@@ -106,7 +110,7 @@ export class JobServices {
 
     if (!company) throw new BadRequestException("please try again");
 
-    const jobsApply =this.jobApplicantRepository
+    const jobsApply = this.jobApplicantRepository
       .createQueryBuilder("jobApply")
 
       .leftJoin("jobApply.job", "job")
@@ -124,7 +128,7 @@ export class JobServices {
         "applicant.job_title",
       ])
 
-      .where("job.companyId = :companyId", { companyId })
+      .where("job.companyId = :companyId", { companyId });
 
     if (q) {
       jobsApply.andWhere(
@@ -142,7 +146,7 @@ export class JobServices {
       jobsApply.andWhere("jobApply.status = :status", { status });
     }
 
-    return {jobaApply: await jobsApply.getMany()};
+    return { jobaApply: await jobsApply.getMany() };
   }
 
   /**
@@ -184,24 +188,19 @@ export class JobServices {
    * @returns message
    */
   public async deleteJob(companyId: string, id: string) {
-    const job = await this.jobRepository.findOne({
-      where: {
-        id,
-        company: {
-          id: companyId,
-        },
+    const result = await this.jobRepository.delete({
+      id,
+      company: {
+        id: companyId,
       },
     });
 
-    if (!job) {
-      throw new BadRequestException("not found job");
+    if (result.affected === 0) {
+      throw new BadRequestException("Job not found");
     }
-
-    await this.jobRepository.remove(job);
 
     return { message: "Job deleted successfully" };
   }
-
   /**
    * application job
    * @param applicantId user
@@ -237,61 +236,93 @@ export class JobServices {
     return { message: "application the job successful" };
   }
 
-  public async screeningCV(companyId: string, jobId: string, userId: string) {
+  public async screeningCV(companyId: string, id: string) {
     const jobApplicantion = await this.jobApplicantRepository.findOne({
       where: {
+        id,
         job: {
-          id: jobId,
           company: { id: companyId },
         },
-        applicant: { id: userId },
       },
     });
 
     if (!jobApplicantion) throw new BadRequestException("please try again");
 
-    jobApplicantion.status = CandidateStatus.SCREENING;
-    await this.jobApplicantRepository.save(jobApplicantion);
+    if (jobApplicantion.status === CandidateStatus.SCREENING) {
+      throw new BadRequestException("status of candidate is already screening");
+    }
 
-    return { message: "convert cadidate status to screening successful" };
+    jobApplicantion.status = CandidateStatus.SCREENING;
+    jobApplicantion.screenAt = new Date();
+    const jobApp = await this.jobApplicantRepository.save(jobApplicantion);
+
+    return {
+      message: "convert candidate status to screening successful",
+      jobApp: {
+        id: jobApp.id,
+        status: jobApp.status,
+        screenAt: jobApp.screenAt,
+      },
+    };
   }
 
-  public async rejectCV(companyId: string, jobId: string, userId: string) {
+  public async rejectCV(companyId: string, id: string) {
     const jobApplicantion = await this.jobApplicantRepository.findOne({
       where: {
+        id,
         job: {
-          id: jobId,
           company: { id: companyId },
         },
-        applicant: { id: userId },
       },
     });
     if (!jobApplicantion) throw new BadRequestException("please try again");
 
     jobApplicantion.status = CandidateStatus.REJECTED;
-    await this.jobApplicantRepository.save(jobApplicantion);
+    jobApplicantion.rejectAt = new Date();
+    const jobApp = await this.jobApplicantRepository.save(jobApplicantion);
 
-    return { message: "convert cadidate status to rejected successful" };
+    return {
+      message: "convert cadidate status to rejected successful",
+      jobApp: {
+        id: jobApp.id,
+        status: jobApp.status,
+        rejectAt: jobApp.rejectAt,
+      },
+    };
   }
 
-  public async hiredCV(companyId: string, jobId: string, userId: string) {
+  public async hiredCV(companyId: string, id: string, dto: HiredDTO) {
     const jobApplicantion = await this.jobApplicantRepository.findOne({
       where: {
+        id,
         job: {
-          id: jobId,
           company: { id: companyId },
         },
-        applicant: { id: userId },
       },
     });
     if (!jobApplicantion) throw new BadRequestException("please try again");
 
+    const { startDate } = dto;
+
     jobApplicantion.status = CandidateStatus.HIRED;
     jobApplicantion.hiredAt = new Date();
-
     await this.jobApplicantRepository.save(jobApplicantion);
 
-    return { message: "convert cadidate status to hired successful" };
+    const nHired = this.hiredRepository.create({
+      startDate,
+      application: jobApplicantion,
+    });
+
+    await this.hiredRepository.save(nHired);
+    return {
+      message: "convert cadidate status to hired successful",
+      date: {
+        id: jobApplicantion.id,
+        status: jobApplicantion.status,
+        hiredAt: jobApplicantion.hiredAt,
+        startDate: nHired.startDate,
+      },
+    };
   }
 
   public async jobApplicantionByUser(
