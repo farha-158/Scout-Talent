@@ -20,6 +20,8 @@ import { InterviewDTO } from "./dto/interview.dto";
 import { Interview } from "./interviews.entity";
 import { JobOfferDTO } from "./dto/jobOffer.dto";
 import { JobOffer } from "./jobOffer.entity";
+import { offerRespones } from "./dto/offerRespones.dto";
+import { OfferStatus } from "src/Shared/Enums/offerStatus.enum";
 @Injectable()
 export class JobServices {
   constructor(
@@ -44,6 +46,10 @@ export class JobServices {
    * @returns messsage
    */
   public async Addjob(dto: addJobDTO, companyId: string) {
+    const user = await this.userService.findUser(companyId);
+
+    if (!user) throw new BadRequestException("please try again");
+
     const {
       title,
       description,
@@ -60,9 +66,12 @@ export class JobServices {
       maxApplications,
     } = dto;
 
-    const user = await this.userService.findUser(companyId);
+    const now = Date.now();
+    const deadline = new Date(dto.deadline);
 
-    if (!user) throw new BadRequestException("please try again");
+    if (deadline.getTime() <= now) {
+      throw new BadRequestException("the deadline must be in the future");
+    }
 
     const Njob = this.jobRepository.create({
       title,
@@ -79,6 +88,7 @@ export class JobServices {
       company: user,
       positions,
       maxApplications,
+      deadline,
     });
 
     await this.jobRepository.save(Njob);
@@ -326,9 +336,10 @@ export class JobServices {
 
     return {
       message: "convert cadidate status to rejected successful",
-      jobApp: {
+      data: {
         id: jobApp.id,
         status: jobApp.status,
+        rejectId: Nreject.id,
         reason: Nreject.reason,
         rejectAt: jobApp.rejectAt,
       },
@@ -353,6 +364,12 @@ export class JobServices {
     if (!(jobApplicantion.status === CandidateStatus.OFFERED)) {
       throw new BadRequestException(
         `the candidate status ${jobApplicantion.status}, can't hired`,
+      );
+    }
+
+    if (!(jobApplicantion.offer.status === OfferStatus.ACCEPTED)) {
+      throw new BadRequestException(
+        "this offer is not accepted , can't hired",
       );
     }
 
@@ -401,15 +418,15 @@ export class JobServices {
         `can't interview ,the candidate status is ${jobApplicantion.status}`,
       );
     }
-    const { type, scheduledAt, meetingLink } = dto;
+    const { type, scheduledAt, meetingLink, durationMin } = dto;
 
-    const now = new Date();
+    const scheduledDate = new Date(scheduledAt);
 
-    if (scheduledAt <= now) {
+    if (scheduledDate <= new Date()) {
       throw new BadRequestException("the scheduled date must be in the future");
     }
 
-    await this.checkInterviewConflict(companyId, scheduledAt, 30);
+    await this.checkInterviewConflict(companyId, scheduledDate, 30);
 
     jobApplicantion.status = CandidateStatus.INTERVIEW;
     jobApplicantion.interviewAt = new Date();
@@ -417,8 +434,9 @@ export class JobServices {
 
     const interview = this.interviewRepository.create({
       type,
-      scheduledAt,
+      scheduledAt: scheduledDate,
       meetingLink,
+      durationMin,
       application: jobApp,
     });
 
@@ -431,7 +449,7 @@ export class JobServices {
         status: jobApp.status,
         interviewId: Ninterview.id,
         interviewtype: type,
-        scheduledAt,
+        scheduledAt: Ninterview.scheduledAt,
         meetingLink,
         interviewAt: jobApp.interviewAt,
       },
@@ -458,30 +476,65 @@ export class JobServices {
 
     const jobApp = await this.jobApplicantRepository.save(jobApplicantion);
 
-    const { startDate, offeredSalary, notes } = dto;
+    const { startDate, offeredSalary, notes, expiresAt } = dto;
+
+    const expiredDate = new Date(expiresAt);
+
+    if (expiredDate <= new Date()) {
+      throw new BadRequestException("the expired date must be in the future");
+    }
     const offer = this.jobOfferRepository.create({
       startDate,
       offeredSalary,
       notes,
+      expiresAt: expiredDate,
       application: jobApp,
     });
 
-    await this.jobOfferRepository.save(offer);
+    const Noffer = await this.jobOfferRepository.save(offer);
 
     return {
       message: "convert cadidate status to interview successful",
       data: {
         id: jobApp.id,
         status: jobApp.status,
+        offerId: Noffer.id,
         offeredSalary,
         startDate,
         notes,
+        expiresAt: Noffer.id,
         offerAt: jobApp.sendOfferAt,
       },
     };
   }
 
-  public async jobApplicantionByUser(
+  public async jobOfferRespones(
+    applicantId: string,
+    offerId: string,
+    dto: offerRespones,
+  ) {
+    const offer = await this.jobOfferRepository.findOne({
+      where: {
+        id: offerId,
+        application: { applicant: { id: applicantId } },
+      },
+    });
+
+    if (!offer) throw new BadRequestException("there is no offer");
+
+    const { status } = dto;
+
+    offer.status = status;
+    offer.respondedAt = new Date();
+
+    await this.jobOfferRepository.save(offer);
+
+    return {
+      data: { offer },
+    };
+  }
+
+  public async alljobsApplicantionByUser(
     userId: string,
     search?: string,
     location?: string,
@@ -526,11 +579,17 @@ export class JobServices {
       .createQueryBuilder("jobApply")
       .leftJoinAndSelect("jobApply.job", "job")
       .leftJoinAndSelect("job.company", "company")
+      .leftJoinAndSelect("jobApply.hiredDetails", "hiredDetails")
+      .leftJoinAndSelect("jobApply.offer", "offer")
+      .leftJoinAndSelect("jobApply.interviews", "interviews")
+      .leftJoinAndSelect("jobApply.reject", "reject")
       .where("jobApply.id = :jobApplyId AND jobApply.applicant = :userId", {
         jobApplyId,
         userId,
       })
       .getOne();
+
+    if (!jobApplyById) throw new BadRequestException("not found Application");
 
     return jobApplyById;
   }
@@ -645,7 +704,7 @@ export class JobServices {
     scheduledAt: Date,
     durationMin: number,
   ) {
-    const start = new Date(scheduledAt);
+    const start = scheduledAt;
     const end = new Date(start.getTime() + durationMin * 60000);
 
     const conflict = await this.interviewRepository

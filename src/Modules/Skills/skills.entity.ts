@@ -5,7 +5,6 @@ import {
   CreateDateColumn,
   ManyToOne,
 } from "typeorm";
-import { CURRENT_TIMESTAMP } from "src/Shared/constants/variables";
 import { User } from "../Users/user.entity";
 
 @Entity({ name: "skills" })
@@ -16,7 +15,7 @@ export class SkillOrSpecializations {
   @Column()
   name: string;
 
-  @CreateDateColumn({ type: "timestamp", default: () => CURRENT_TIMESTAMP })
+  @CreateDateColumn({ type: "timestamptz"})
   createdAt: Date;
 
   @ManyToOne(() => User, (user) => user.skillsORspecializations)

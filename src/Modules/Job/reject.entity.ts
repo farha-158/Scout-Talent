@@ -1,4 +1,3 @@
-import { CURRENT_TIMESTAMP } from "src/Shared/constants/variables";
 import {
   Column,
   CreateDateColumn,
@@ -17,7 +16,7 @@ export class Reject {
   @Column()
   reason: string;
 
-  @CreateDateColumn({ type: "timestamp", default: () => CURRENT_TIMESTAMP })
+  @CreateDateColumn({ type: "timestamptz"})
   createdAt: Date;
 
   @OneToOne(() => JobApplicant)

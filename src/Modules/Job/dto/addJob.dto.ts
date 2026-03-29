@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsNumber, IsString } from "class-validator";
+import { IsArray, IsISO8601, IsNumber, IsString } from "class-validator";
 import { JobStatus, JobType, WorkMode } from "src/Shared/Enums/job.enum";
 
 export class addJobDTO {
@@ -54,4 +54,10 @@ export class addJobDTO {
   @IsNumber()
   @ApiProperty({ required: false })
   maxApplications: number;
+
+  @IsISO8601({}, { message: "Invalid date format" })
+  @ApiProperty({
+    example: "2026-04-01T10:00:00+02:00",
+  })
+  deadline:string
 }

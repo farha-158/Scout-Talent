@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
 import { JobServices } from "./job.service";
 import { Roles } from "src/Shared/decorator/user_role.decorator";
 import { RoleUser } from "src/Shared/Enums/user.enum";
@@ -11,12 +20,14 @@ import { HiredDTO } from "./dto/hired.dto";
 import { RejectDTO } from "./dto/reject.dto";
 import { InterviewDTO } from "./dto/interview.dto";
 import { JobOfferDTO } from "./dto/jobOffer.dto";
+import { JobType, WorkMode } from "src/Shared/Enums/job.enum";
+import { offerRespones } from "./dto/offerRespones.dto";
 
 @Controller("candidate")
 export class CandidateController {
   constructor(private jobService: JobServices) {}
 
-  @Get("jobsApply")
+  @Get("company/jobsApply")
   @Roles(RoleUser.COMPANY)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
@@ -43,7 +54,7 @@ export class CandidateController {
     @currentUser() company: JwtPayloadType,
     @Param("id") id: string,
   ) {
-    const data = await this.jobService.screeningCV(company.id,id);
+    const data = await this.jobService.screeningCV(company.id, id);
     return { data };
   }
 
@@ -54,9 +65,9 @@ export class CandidateController {
   public async rejectedCV(
     @currentUser() company: JwtPayloadType,
     @Param("id") id: string,
-    @Body() body:RejectDTO
+    @Body() body: RejectDTO,
   ) {
-    const data = await this.jobService.rejectCV(company.id, id ,body);
+    const data = await this.jobService.rejectCV(company.id, id, body);
     return { data };
   }
 
@@ -67,9 +78,9 @@ export class CandidateController {
   public async hiredCV(
     @currentUser() company: JwtPayloadType,
     @Param("id") id: string,
-    @Body() body:HiredDTO
+    @Body() body: HiredDTO,
   ) {
-    const data = await this.jobService.hiredCV(company.id, id ,body);
+    const data = await this.jobService.hiredCV(company.id, id, body);
     return { data };
   }
 
@@ -80,9 +91,9 @@ export class CandidateController {
   public async interviewCV(
     @currentUser() company: JwtPayloadType,
     @Param("id") id: string,
-    @Body() body:InterviewDTO
+    @Body() body: InterviewDTO,
   ) {
-    const data = await this.jobService.interviewCV(company.id, id ,body);
+    const data = await this.jobService.interviewCV(company.id, id, body);
     return { data };
   }
 
@@ -93,9 +104,66 @@ export class CandidateController {
   public async offerCV(
     @currentUser() company: JwtPayloadType,
     @Param("id") id: string,
-    @Body() body:JobOfferDTO
+    @Body() body: JobOfferDTO,
   ) {
-    const data = await this.jobService.jobOffer(company.id, id ,body);
+    const data = await this.jobService.jobOffer(company.id, id, body);
     return { data };
+  }
+
+  @Get("applicant/jobsApply")
+  @Roles(RoleUser.APPLICANT)
+  @UseGuards(AuthGuard)
+  @ApiSecurity("bearer")
+  @ApiQuery({ name: "search", required: false, type: String })
+  @ApiQuery({ name: "location", required: false, type: String })
+  @ApiQuery({ name: "jobType", required: false, enum: JobType })
+  @ApiQuery({ name: "workMode", required: false, enum: WorkMode })
+  public async applicantJobByApplicant(
+    @currentUser() user: JwtPayloadType,
+    @Query("search") search?: string,
+    @Query("location") location?: string,
+    @Query("jobType") jobType?: JobType,
+    @Query("workMode") workMode?: WorkMode,
+  ) {
+    const jobApply = await this.jobService.alljobsApplicantionByUser(
+      user.id,
+      search,
+      location,
+      jobType,
+      workMode,
+    );
+    return {
+      data: jobApply,
+    };
+  }
+
+  @Get("applicant/jobsApply/:id")
+  @Roles(RoleUser.APPLICANT)
+  @UseGuards(AuthGuard)
+  @ApiSecurity("bearer")
+  public async applicantJobByApplicantByID(
+    @currentUser() user: JwtPayloadType,
+    @Param("id") id: string,
+  ) {
+    const jobApply = await this.jobService.jobApplicantionByUserByID(
+      user.id,
+      id,
+    );
+
+    return {
+      data: jobApply,
+    };
+  }
+
+  @Patch("offer/response/:offerId")
+  @Roles(RoleUser.APPLICANT)
+  @UseGuards(AuthGuard)
+  @ApiSecurity("bearer")
+  public async offerRespones(
+    @Param("offerId") offerId: string,
+    @currentUser() user: JwtPayloadType,
+    @Body() body: offerRespones,
+  ) {
+    return this.jobService.jobOfferRespones(user.id, offerId, body);
   }
 }

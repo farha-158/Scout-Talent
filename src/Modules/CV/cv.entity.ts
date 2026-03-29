@@ -6,7 +6,6 @@ import {
   ManyToOne,
   OneToMany,
 } from "typeorm";
-import { CURRENT_TIMESTAMP } from "src/Shared/constants/variables";
 import { User } from "../Users/user.entity";
 import { JobApplicant } from "../Job/job_applicant.entity";
 
@@ -21,7 +20,7 @@ export class CV {
   @Column()
   url: string;
 
-  @CreateDateColumn({ type: "timestamp", default: () => CURRENT_TIMESTAMP })
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt: Date;
 
   @ManyToOne(() => User, (user) => user.Cvs)

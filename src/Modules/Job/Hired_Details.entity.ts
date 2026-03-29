@@ -1,4 +1,3 @@
-import { CURRENT_TIMESTAMP } from "src/Shared/constants/variables";
 import {
   Column,
   CreateDateColumn,
@@ -14,10 +13,10 @@ export class HiredDetails {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ type: "timestamp" })
+  @Column({ type: "timestamptz" })
   startDate: Date;
 
-  @CreateDateColumn({ type: "timestamp", default: () => CURRENT_TIMESTAMP })
+  @CreateDateColumn({ type: "timestamptz"})
   createdAt: Date;
 
   @OneToOne(() => JobApplicant)

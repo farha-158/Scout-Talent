@@ -1,4 +1,3 @@
-import { CURRENT_TIMESTAMP } from "src/Shared/constants/variables";
 import {
   InterviewStatus,
   InterviewTypes,
@@ -34,13 +33,16 @@ export class Interview {
   })
   status: InterviewStatus;
 
-  @Column({ type: "timestamp" })
+  @Column({ type: "timestamptz" })
   scheduledAt: Date;
 
   @Column()
   meetingLink: string;
 
-  @CreateDateColumn({ type: "timestamp", default: () => CURRENT_TIMESTAMP })
+  @Column({ type: "int" })
+  durationMin: number;
+
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt: Date;
 
   @ManyToOne(() => JobApplicant, (application) => application.interviews)

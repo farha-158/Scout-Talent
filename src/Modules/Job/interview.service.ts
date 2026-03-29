@@ -3,7 +3,10 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { JobApplicant } from "./job_applicant.entity";
 import { FindOptionsWhere, Repository } from "typeorm";
 import { Interview } from "./interviews.entity";
-import { InterviewStatus } from "src/Shared/Enums/Interview.enum";
+import {
+  InterviewNextStep,
+  InterviewStatus,
+} from "src/Shared/Enums/Interview.enum";
 import { completeInterviewDTO } from "./dto/completeInterview.dto";
 import { FeedBack } from "./feedback.entity";
 import { rescheduleDTO } from "./dto/reschedule.dto";
@@ -12,6 +15,7 @@ import { CancelInterview } from "./cancelInterview.entity";
 import { CancelBy } from "src/Shared/Enums/interviewCancel.enum";
 import { CandidateStatus } from "src/Shared/Enums/candidateStatus.enum";
 import { Reject } from "./reject.entity";
+import { JobServices } from "./job.service";
 
 @Injectable()
 export class InterviewService {
@@ -25,6 +29,7 @@ export class InterviewService {
     @InjectRepository(CancelInterview)
     private cancelInterviewRepository: Repository<CancelInterview>,
     @InjectRepository(Reject) private rejectRepository: Repository<Reject>,
+    private jobService: JobServices,
   ) {}
 
   public async getAllInterviewWithCompany(companyId: string) {
@@ -74,6 +79,9 @@ export class InterviewService {
         id: interviewId,
         application: { job: { company: { id: companyId } } },
       },
+      relations: {
+        application: true,
+      },
     });
     if (!interview) throw new BadRequestException("there is no interview");
 
@@ -84,13 +92,19 @@ export class InterviewService {
       throw new BadRequestException("this interview is cancel");
     }
 
-    const now = Date.now();
+    const now = new Date().getTime();
 
-    if ((new Date(interview.scheduledAt).getTime()) > now) {
+    const endTime =
+      new Date(interview.scheduledAt).getTime() + interview.durationMin * 60000;
+console.log("scheduledAt:", interview.scheduledAt);
+console.log("endTime:", new Date(endTime));
+console.log("now:", new Date());
+    if (now < endTime) {
       throw new BadRequestException("Interview is not finished yet");
     }
 
-    const { publicFeedback, rating, nextStep } = dto;
+    const { publicFeedback, rating, nextStep, offer, nextInterview, reject } =
+      dto;
 
     interview.status = InterviewStatus.COMPLETED;
     await this.interviewRepository.save(interview);
@@ -101,6 +115,46 @@ export class InterviewService {
       nextStep,
       interview,
     });
+
+    switch (nextStep) {
+      case InterviewNextStep.ANOTHERINTERVIEW: {
+        if (!nextInterview)
+          throw new BadRequestException("next interview data required");
+
+        const { data } = await this.jobService.interviewCV(
+          companyId,
+          interview.application.id,
+          nextInterview,
+        );
+
+        feedback.resultId = data.interviewId;
+        break;
+      }
+
+      case InterviewNextStep.OFFERED: {
+        if (!offer) throw new BadRequestException("offer data required");
+
+        const { data } = await this.jobService.jobOffer(
+          companyId,
+          interview.application.id,
+          offer,
+        );
+
+        feedback.resultId = data.offerId;
+        break;
+      }
+      case InterviewNextStep.REJECTED: {
+        if (!reject) throw new BadRequestException("reject data required");
+
+        const { data } = await this.jobService.rejectCV(
+          companyId,
+          interview.application.id,
+          reject,
+        );
+        feedback.resultId = data.rejectId;
+        break;
+      }
+    }
 
     await this.feedbackRepository.save(feedback);
 
@@ -134,25 +188,32 @@ export class InterviewService {
         `can't rescheduled, the interview status is ${interview.status}`,
       );
     }
-    const now = new Date();
 
-    if (new Date(interview.scheduledAt).getTime() <= now.getTime()) {
+    const now = Date.now();
+    const scheduledDate = new Date(dto.scheduledAt);
+    
+    if (scheduledDate.getTime() <= now) {
+      throw new BadRequestException("the scheduled date must be in the future");
+    }
+
+    if (interview.scheduledAt.getTime() <= now) {
       throw new BadRequestException(
         "can't reschedule, interview already finished",
       );
     }
-    if (new Date(dto.scheduledAt).getTime() <= now.getTime()) {
-      throw new BadRequestException("the scheduled date must be in the future");
-    }
 
-    if (interview.scheduledAt.getTime() === dto.scheduledAt.getTime()) {
+    if (interview.scheduledAt.getTime() === scheduledDate.getTime()) {
       throw new BadRequestException(
         "No changes detected in the scheduled interview time.",
       );
     }
-    await this.checkInterviewConflict(companyId, dto.scheduledAt, 30);
+    await this.checkInterviewConflict(
+      companyId,
+      scheduledDate,
+      interview.durationMin,
+    );
 
-    interview.scheduledAt = dto.scheduledAt;
+    interview.scheduledAt = scheduledDate;
     interview.meetingLink = dto.meetingLink;
     interview.status = InterviewStatus.RESCHEDULED;
 

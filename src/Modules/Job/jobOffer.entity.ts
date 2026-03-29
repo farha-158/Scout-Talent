@@ -1,4 +1,3 @@
-import { CURRENT_TIMESTAMP } from "src/Shared/constants/variables";
 import {
   Column,
   CreateDateColumn,
@@ -8,6 +7,8 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 import { JobApplicant } from "./job_applicant.entity";
+import { OfferStatus } from "src/Shared/Enums/offerStatus.enum";
+
 @Entity("jobOffer")
 export class JobOffer {
   @PrimaryGeneratedColumn("uuid")
@@ -16,13 +17,26 @@ export class JobOffer {
   @Column()
   offeredSalary: string;
 
-  @Column({ type: "timestamp" })
+  @Column({ type: "timestamptz" })
   startDate: Date;
 
   @Column({ nullable: true })
   notes: string;
 
-  @CreateDateColumn({ type: "timestamp", default: () => CURRENT_TIMESTAMP })
+  @Column({ type: "timestamptz" })
+  expiresAt: Date;
+
+  @Column({ type: "timestamptz", nullable: true })
+  respondedAt: Date;
+
+  @Column({
+    type: "enum",
+    enum: OfferStatus,
+    default: OfferStatus.PENDING,
+  })
+  status: OfferStatus;
+
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt: Date;
 
   @OneToOne(() => JobApplicant)

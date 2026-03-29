@@ -1,13 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Type } from "class-transformer";
-import { IsDate, IsString, MinDate } from "class-validator";
+import { IsISO8601, IsString } from "class-validator";
 
 export class rescheduleDTO {
-  @Type(() => Date)
-  @IsDate()
-  @MinDate(new Date(), { message: 'the scheduled date must be in the future' })
-  @ApiProperty()
-  scheduledAt: Date;
+  @IsISO8601({}, { message: "Invalid date format" })
+  @ApiProperty({
+    example: "2026-04-01T10:00:00+02:00",
+  })
+  scheduledAt: string;
 
   @IsString()
   @ApiProperty()

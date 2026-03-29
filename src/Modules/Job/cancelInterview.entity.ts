@@ -1,4 +1,3 @@
-import { CURRENT_TIMESTAMP } from "src/Shared/constants/variables";
 import { CancelBy } from "src/Shared/Enums/interviewCancel.enum";
 import {
   Column,
@@ -24,7 +23,7 @@ export class CancelInterview {
   })
   cancelBy: CancelBy;
 
-  @CreateDateColumn({ type: "timestamp", default: () => CURRENT_TIMESTAMP })
+  @CreateDateColumn({ type: "timestamptz"})
   createdAt: Date;
 
   @OneToOne(() => Interview)

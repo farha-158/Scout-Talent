@@ -1,4 +1,3 @@
-import { CURRENT_TIMESTAMP } from "src/Shared/constants/variables";
 import { RoleUser } from "src/Shared/Enums/user.enum";
 import {
   Column,
@@ -57,7 +56,7 @@ export class User {
   @Column({ nullable: true, select: false })
   resetPasswordToken: string;
 
-  @CreateDateColumn({ type: "timestamp", default: () => CURRENT_TIMESTAMP })
+  @CreateDateColumn({ type: "timestamptz"})
   createAt: Date;
 
   @OneToMany(() => Job, (job) => job.company)

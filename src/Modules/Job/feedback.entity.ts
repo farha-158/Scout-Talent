@@ -1,6 +1,5 @@
-import { CURRENT_TIMESTAMP } from "src/Shared/constants/variables";
 import {
-    Check,
+  Check,
   Column,
   CreateDateColumn,
   Entity,
@@ -10,7 +9,6 @@ import {
 } from "typeorm";
 import { Interview } from "./interviews.entity";
 import { InterviewNextStep } from "src/Shared/Enums/Interview.enum";
-
 @Entity("feedback")
 @Check(`"rating" >= 1 AND "rating" <= 5`)
 export class FeedBack {
@@ -29,7 +27,10 @@ export class FeedBack {
   })
   nextStep: InterviewNextStep;
 
-  @CreateDateColumn({ type: "timestamp", default: () => CURRENT_TIMESTAMP })
+  @Column()
+  resultId:string
+
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt: Date;
 
   @OneToOne(() => Interview)

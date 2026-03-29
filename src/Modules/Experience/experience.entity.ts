@@ -4,8 +4,8 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   ManyToOne,
+  UpdateDateColumn,
 } from "typeorm";
-import { CURRENT_TIMESTAMP } from "src/Shared/constants/variables";
 import { User } from "../Users/user.entity";
 @Entity({ name: "experience" })
 export class Experience {
@@ -18,22 +18,20 @@ export class Experience {
   @Column()
   company: string;
 
-  @Column()
+  @Column({ type: "timestamptz" })
   startDate: Date;
 
-  @Column()
+  @Column({ type: "timestamptz" })
   endDate: Date;
 
   @Column()
   description: string;
 
-  @CreateDateColumn({ type: "timestamp", default: () => CURRENT_TIMESTAMP })
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt: Date;
 
-  @CreateDateColumn({
-    type: "timestamp",
-    default: () => CURRENT_TIMESTAMP,
-    onUpdate: CURRENT_TIMESTAMP,
+  @UpdateDateColumn({
+    type: "timestamptz",
   })
   updatedAt: Date;
 
