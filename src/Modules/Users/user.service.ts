@@ -15,7 +15,10 @@ export class UserService {
   ) {}
 
   public async findUser(id: string) {
-    const user = await this.userRepository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({ 
+      where: { id } ,
+      relations:['experience','skillsORspecializations']
+    });
 
     return user;
   }
