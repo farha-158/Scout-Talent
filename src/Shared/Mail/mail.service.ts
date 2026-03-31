@@ -37,4 +37,19 @@ export class MailService {
 
     return await sgMail.send(msg);
   }
+
+  // Reset Password
+  public async sendRestoreAccount(email: string, link: string) {
+    const msg = {
+      to: email,
+      from: this.config.get<string>("SENDGRID_FROM_EMAIL")!,
+      subject: "Restore Your Account – Hakeem Scout Talent", 
+      templateId: this.config.get<string>("SENDGRID_RESTORE_TEMPLATE_ID")!,
+      dynamicTemplateData: {
+        link,
+      },
+    };
+
+    return await sgMail.send(msg);
+  }
 }

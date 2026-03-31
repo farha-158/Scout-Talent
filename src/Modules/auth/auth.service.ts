@@ -1,7 +1,11 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from "@nestjs/common";
+import { InjectDataSource, InjectRepository } from "@nestjs/typeorm";
 import { User } from "../Users/user.entity";
-import { Repository } from "typeorm";
+import { DataSource, Repository } from "typeorm";
 import { ConfigService } from "@nestjs/config";
 
 import { JwtService } from "@nestjs/jwt";
@@ -14,17 +18,27 @@ import { resetPasswordDTO } from "./dto/reset_password.dto";
 import { StringValue } from "ms";
 import { resendEmailVerify } from "./dto/resendEmailVerify.dto";
 import { userRoleDTO } from "./dto/userRole.dto";
-import { MailService } from "src/Shared/Mail/mail.service";
 import { JwtPayloadType } from "src/Shared/types/JwtPayloadType";
 import { RoleUser } from "src/Shared/Enums/user.enum";
+import { generateToken } from "src/Shared/utils/generate.util";
+import { mintesToMilliseconds } from "src/Shared/utils/cookie.util";
+import { Outbox } from "../Users/outbox.entity";
+import { EVENT_TYPE } from "src/Shared/Enums/outbox.enum";
+import { UserToken } from "../Users/user-token.entity";
+import { UserTokenType } from "src/Shared/Enums/UserToken.enum";
+import { requestRestoreDTO } from "./dto/requestRestore.dto";
 
 @Injectable()
 export class AuthService {
   constructor(
+    @InjectDataSource()
+    private dataSource: DataSource,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(UserToken)
+    private userTokenRepository: Repository<UserToken>,
+    @InjectRepository(Outbox) private outboxRepository: Repository<Outbox>,
     private config: ConfigService,
-    private mailService: MailService,
     private jwtService: JwtService,
   ) {}
 
@@ -52,6 +66,8 @@ export class AuthService {
     const saltOrRounds = 10;
     const hash = await bcrypt.hash(password, saltOrRounds);
 
+    const token = generateToken();
+
     const Suser = this.userRepository.create({
       name,
       email,
@@ -61,14 +77,27 @@ export class AuthService {
       linkedIn_profile,
       location,
       job_title,
-      verificationToken: randomBytes(32).toString("hex"),
     });
 
-    const newuser = await this.userRepository.save(Suser);
+    await this.dataSource.transaction(async (manager) => {
+      const nUser = await manager.save(Suser);
 
-    const link = `${this.config.get<string>("DOMIN")}/api/v1/auth/verify-email/${newuser.id}/${newuser.verificationToken}`;
+      const emailverify = manager.create(UserToken, {
+        user: nUser,
+        token,
+        type: UserTokenType.VERIFY_EMAIL,
+        expiresAt: new Date(Date.now() + mintesToMilliseconds(15)),
+      });
 
-    await this.mailService.sendVerifyEmail(email, link);
+      await manager.save(emailverify);
+
+      const outbox = manager.create(Outbox, {
+        event_type: EVENT_TYPE.SEND_VERIFICATION_EMAIL,
+        payload: { email, token },
+        nextRetryAt: new Date()
+      });
+      await manager.save(outbox);
+    });
 
     return {
       message: "Verification email sent successfully. Please check your inbox.",
@@ -83,22 +112,35 @@ export class AuthService {
   public async login(dto: loginDTO) {
     const { email, password, rememberMe } = dto;
 
+    const fakeHash = "$2b$10$abcdefghijklmnopqrstuv1234567890";
+
     const user = await this.userRepository
       .createQueryBuilder("user")
       .addSelect("user.password")
       .where("user.email = :email", { email })
       .getOne();
-    if (!user)
-      throw new BadRequestException("No account found with this email");
 
-    const ckpass = await bcrypt.compare(password, user.password);
-    if (!ckpass) throw new BadRequestException("Incorrect password");
+    let isValid = false;
 
-    if (!user.isAccountVerified) {
+    if (user) {
+      isValid = await bcrypt.compare(password, user.password);
+    } else {
+      await bcrypt.compare(password, fakeHash);
+    }
+    if (!user || !isValid)
+      throw new UnauthorizedException("Invalid email or password");
+
+    if (!user.isEmailVerified) {
       throw new BadRequestException(
         "Please verify your email before logging in",
       );
     }
+
+    if (user.isDelete)
+      throw new BadRequestException(
+        "Account is deleted. Please restore it before continuing.",
+      );
+
     const payload: JwtPayloadType = { id: user.id, role: user.role };
 
     const accessToken = await this.jwtService.signAsync(payload);
@@ -117,15 +159,18 @@ export class AuthService {
     const HrefreshToken = await bcrypt.hash(refreshToken, 10);
     user.refreshToken = HrefreshToken;
 
-    await this.userRepository.save(user);
+    const Nuser = await this.userRepository.save(user);
 
-    const u = await this.userRepository
-      .createQueryBuilder("user")
-      .select(["user.id", "user.name", "user.role"])
-      .where("user.id = :id", { id: user.id })
-      .getOne();
-
-    return { message: "login successful", accessToken, refreshToken, u };
+    return {
+      message: "login successful",
+      accessToken,
+      refreshToken,
+      u: {
+        id: Nuser.id,
+        name: Nuser.name,
+        role: Nuser.role,
+      },
+    };
   }
 
   public async resendEmailVerify(dto: resendEmailVerify) {
@@ -140,18 +185,28 @@ export class AuthService {
     if (!user)
       throw new BadRequestException("No account found with this email");
 
-    if (user.isAccountVerified)
+    if (user.isEmailVerified)
       return {
         message: "Email is already verified",
       };
-    const verificationToken = randomBytes(32).toString("hex");
+    const token = generateToken();
 
-    user.verificationToken = verificationToken;
-    await this.userRepository.save(user);
+    await this.dataSource.transaction(async (manager) => {
+      const emailverify = manager.create(UserToken, {
+        user,
+        token,
+        type: UserTokenType.VERIFY_EMAIL,
+        expiresAt: new Date(Date.now() + mintesToMilliseconds(15)),
+      });
 
-    const link = `${this.config.get<string>("DOMIN")}/api/v1/auth/verify-email/${user.id}/${user.verificationToken}`;
+      await manager.save(emailverify);
 
-    await this.mailService.sendVerifyEmail(user.email, link);
+      const outbox = manager.create(Outbox, {
+        event_type: EVENT_TYPE.SEND_VERIFICATION_EMAIL,
+        payload: { email, token },
+      });
+      await manager.save(outbox);
+    });
 
     return {
       message: "Verification email sent successfully. Please check your inbox.",
@@ -197,29 +252,82 @@ export class AuthService {
     return true;
   }
 
+  public async requestRestore(dto: requestRestoreDTO) {
+    const { email } = dto;
+
+    const user = await this.userRepository.findOne({ where: { email } });
+
+    if (user && user.isDelete) {
+      const token = generateToken();
+
+      await this.dataSource.transaction(async (manager) => {
+        const restore = manager.create(UserToken, {
+          user,
+          token,
+          type: UserTokenType.RESTORE_ACCOUNT,
+          expiresAt: new Date(Date.now() + mintesToMilliseconds(15)),
+        });
+
+        await manager.save(restore);
+
+        const outbox = manager.create(Outbox, {
+          event_type: EVENT_TYPE.SEND_RESTORE_EMAIL,
+          payload: { email, token },
+          nextRetryAt: new Date()
+        });
+        await manager.save(outbox);
+      });
+    }
+    return { message: "If this email exists, we sent a reset link" };
+  }
+
+  public async confirmRestore(token: string) {
+    const record = await this.userTokenRepository.findOne({
+      where: { token, type: UserTokenType.RESTORE_ACCOUNT },
+      relations: ["user"],
+    });
+
+    if (!record) {
+      throw new BadRequestException("Invalid token");
+    }
+
+    if (record.expiresAt < new Date()) {
+      throw new BadRequestException("Token expired");
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      await manager.update(User, record.user.id, { isDelete: false });
+
+      await manager.delete(UserToken, record.id);
+    });
+
+    return { message: "restore Account successful" };
+  }
   /**
    * to verify user's email
    * @param id user Id
    * @param verificationToken
    * @returns message
    */
-  public async verifyEmail(id: string, verificationToken: string) {
-    const user = await this.userRepository
-      .createQueryBuilder("user")
-      .addSelect("user.verificationToken")
-      .where("user.id = :id", { id })
-      .getOne();
-    if (!user) throw new BadRequestException("user not found");
+  public async verifyEmail(token: string) {
+    const record = await this.userTokenRepository.findOne({
+      where: { token, type: UserTokenType.VERIFY_EMAIL },
+      relations: ["user"],
+    });
 
-    if (user.verificationToken === null)
-      throw new BadRequestException("there is no verification token");
-    if (user.verificationToken !== verificationToken)
-      throw new BadRequestException(" invalid link");
+    if (!record) {
+      throw new BadRequestException("Invalid token");
+    }
 
-    user.isAccountVerified = true;
-    user.verificationToken = "";
+    if (record.expiresAt < new Date()) {
+      throw new BadRequestException("Token expired");
+    }
 
-    await this.userRepository.save(user);
+    await this.dataSource.transaction(async (manager) => {
+      await manager.update(User, record.user.id, { isEmailVerified: true });
+
+      await manager.delete(UserToken, record.id);
+    });
 
     return { message: "your email has been verify , you can log in now" };
   }
@@ -232,23 +340,30 @@ export class AuthService {
   public async forgetPassword(dto: forgetPasswordDTO) {
     const { email } = dto;
 
-    const user = await this.userRepository
-      .createQueryBuilder("user")
-      .addSelect("user.resetPasswordToken")
-      .where("user.email = :email", { email })
-      .getOne();
+    const user = await this.userRepository.findOne({ where: { email } });
 
-    if (!user) throw new BadRequestException("email not in DB");
+    if (user) {
+      const token = generateToken();
 
-    user.resetPasswordToken = randomBytes(32).toString("hex");
+      await this.dataSource.transaction(async (manager) => {
+        const resetPassword = manager.create(UserToken, {
+          user,
+          token,
+          type: UserTokenType.RESET_PASSWORD,
+          expiresAt: new Date(Date.now() + mintesToMilliseconds(15)),
+        });
 
-    await this.userRepository.save(user);
+        await manager.save(resetPassword);
 
-    const link = `${this.config.get<string>("DOMIN")}/api/v1/auth/reset_password/${user.id}/${user.resetPasswordToken}`;
-
-    await this.mailService.sendResetPassword(email, link);
-
-    return { message: "check your email , click to link" };
+        const outbox = manager.create(Outbox, {
+          event_type: EVENT_TYPE.SEND_RESET_PASSWORD,
+          payload: { email, token },
+          nextRetryAt: new Date()
+        });
+        await manager.save(outbox);
+      });
+    }
+    return { message: "If this email exists, we sent a reset link" };
   }
 
   /**
@@ -258,32 +373,28 @@ export class AuthService {
    * @param resetPasswordToken
    * @returns message
    */
-  public async resetPassword(
-    dto: resetPasswordDTO,
-    id: string,
-    resetPasswordToken: string,
-  ) {
+  public async resetPassword(dto: resetPasswordDTO, token: string) {
+    const record = await this.userTokenRepository.findOne({
+      where: { token, type: UserTokenType.VERIFY_EMAIL },
+      relations: ["user"],
+    });
+
+    if (!record) {
+      throw new BadRequestException("Invalid token");
+    }
+
+    if (record.expiresAt < new Date()) {
+      throw new BadRequestException("Token expired");
+    }
+
     const { newPassword } = dto;
-    const user = await this.userRepository
-      .createQueryBuilder("user")
-      .addSelect("user.resetPasswordToken")
-      .where("user.id = :id", { id })
-      .getOne();
-
-    if (!user) throw new BadRequestException("please try again");
-
-    if (user.resetPasswordToken === "")
-      throw new BadRequestException("there is no verification token");
-
-    if (user.resetPasswordToken !== resetPasswordToken)
-      throw new BadRequestException("invalid link");
-
     const hashPassword = await bcrypt.hash(newPassword, 10);
 
-    user.password = hashPassword;
-    user.resetPasswordToken = "";
+    await this.dataSource.transaction(async (manager) => {
+      await manager.update(User, record.user.id, { password: hashPassword });
 
-    await this.userRepository.save(user);
+      await manager.delete(UserToken, record.id);
+    });
 
     return { message: "password update successful" };
   }
@@ -302,21 +413,18 @@ export class AuthService {
         name,
         email,
         password: hash,
-        isAccountVerified: true,
+        isEmailVerified: true,
         role: RoleUser.APPLICANT,
       });
 
       await this.userRepository.save(user);
 
       return {
-        message: "Account created successfully, please choose your role",
         needRole: true,
         userId: user.id,
       };
     }
     const payload: JwtPayloadType = { id: user.id, role: user.role };
-
-    const accessToken = await this.jwtService.signAsync(payload);
 
     const refreshToken = await this.jwtService.signAsync(payload, {
       secret: this.config.get<string>("JWT_Refresh_SECRET"),
@@ -328,18 +436,17 @@ export class AuthService {
     const HrefreshToken = await bcrypt.hash(refreshToken, 10);
 
     user.refreshToken = HrefreshToken;
-    user.isAccountVerified = true;
+    user.isEmailVerified = true;
 
     await this.userRepository.save(user);
 
     return {
-      message: "login successful",
       needRole: false,
-      token: { accessToken, refreshToken },
+      token: { refreshToken },
     };
   }
 
-  public async SelectRoleuser(dto: userRoleDTO, id: string) {
+  public async SelectRoleUser(dto: userRoleDTO, id: string) {
     const user = await this.userRepository.findOne({ where: { id } });
     if (!user) throw new BadRequestException("no user found , try again");
 
@@ -361,8 +468,52 @@ export class AuthService {
     user.role = role;
     user.refreshToken = HrefreshToken;
 
-    await this.userRepository.save(user);
+    const Nuser = await this.userRepository.save(user);
 
-    return { message: "login successful", accessToken, refreshToken };
+    return {
+      message: "login successful",
+      accessToken,
+      refreshToken,
+      u: {
+        id: Nuser.id,
+        name: Nuser.name,
+        role: Nuser.role,
+      },
+    };
+  }
+
+  public async getMe(refreshToken: string) {
+    const payload: JwtPayloadType = await this.jwtService.verifyAsync(
+      refreshToken,
+      {
+        secret: this.config.get<string>("JWT_Refresh_SECRET"),
+      },
+    );
+
+    const user = await this.userRepository
+      .createQueryBuilder("user")
+      .addSelect("user.refreshToken")
+      .where("user.id = :id", { id: payload.id })
+      .getOne();
+
+    if (!user || !user.refreshToken)
+      throw new BadRequestException("Access denied");
+
+    const isMatch = await bcrypt.compare(refreshToken, user.refreshToken);
+    if (!isMatch) throw new BadRequestException("Invalid refresh token");
+
+    const newAccessToken = await this.jwtService.signAsync({
+      id: user.id,
+      role: user.role,
+    });
+
+    return {
+      accessToken: newAccessToken,
+      u: {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+      },
+    };
   }
 }

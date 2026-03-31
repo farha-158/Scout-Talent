@@ -11,6 +11,7 @@ import { JobApplicant } from "../Job/job_applicant.entity";
 import { CV } from "../CV/cv.entity";
 import { SkillOrSpecializations } from "../Skills/skills.entity";
 import { Experience } from "../Experience/experience.entity";
+import { UserToken } from "./user-token.entity";
 
 @Entity({ name: "users" })
 export class User {
@@ -48,15 +49,12 @@ export class User {
   refreshToken: string;
 
   @Column({ default: false })
-  isAccountVerified: boolean;
+  isEmailVerified: boolean;
 
-  @Column({ nullable: true, select: false })
-  verificationToken: string;
+  @Column({ default: false })
+  isDelete: boolean;
 
-  @Column({ nullable: true, select: false })
-  resetPasswordToken: string;
-
-  @CreateDateColumn({ type: "timestamptz"})
+  @CreateDateColumn({ type: "timestamptz" })
   createAt: Date;
 
   @OneToMany(() => Job, (job) => job.company)
@@ -71,6 +69,9 @@ export class User {
   @OneToMany(() => Experience, (experience) => experience.user)
   experience: Experience[];
 
-  @OneToMany(() => JobApplicant, (jobApplicant) => jobApplicant.job)
+  @OneToMany(() => JobApplicant, (jobApplicant) => jobApplicant.applicant)
   jobApplicant: JobApplicant[];
+
+  @OneToMany(()=>UserToken,(token)=>token.user)
+  tokens:UserToken[]
 }

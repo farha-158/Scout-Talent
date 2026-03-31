@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
+import { InjectDataSource, InjectRepository } from "@nestjs/typeorm";
 import { Job } from "./job.entity";
-import { MoreThan, Repository } from "typeorm";
+import { DataSource, MoreThan, Repository } from "typeorm";
 import { addJobDTO } from "./dto/addJob.dto";
 import { UserService } from "../Users/user.service";
 import { JobApplicant } from "./job_applicant.entity";
@@ -25,6 +25,8 @@ import { OfferStatus } from "src/Shared/Enums/offerStatus.enum";
 @Injectable()
 export class JobServices {
   constructor(
+    @InjectDataSource()
+    private dataSource: DataSource,
     @InjectRepository(Job) private jobRepository: Repository<Job>,
     @InjectRepository(JobApplicant)
     private jobApplicantRepository: Repository<JobApplicant>,
@@ -242,7 +244,9 @@ export class JobServices {
     const user = await this.userService.findUser(applicantId);
     if (!user) throw new BadRequestException("please try again");
 
-    const job = await this.jobRepository.findOne({ where: { id: jobId } });
+    const job = await this.jobRepository.findOne({
+      where: { id: jobId, status: JobStatus.PAUSED },
+    });
     if (!job) throw new BadRequestException("please try again");
 
     const cv = await this.cvService.findCV(cvId);
@@ -250,14 +254,23 @@ export class JobServices {
 
     const { about } = dto;
 
-    const jobApp = this.jobApplicantRepository.create({
-      applicant: user,
-      job,
-      cv,
-      about,
-    });
+    await this.dataSource.transaction(async (manager) => {
+      if (job.applicationsCount >= job.maxApplications) {
+        throw new BadRequestException(
+          "This job has reached the maximum number of applications and is now closed.",
+        );
+      }
+      await manager.increment(Job, { id: job.id }, "applicationsCount", 1);
 
-    await this.jobApplicantRepository.save(jobApp);
+      const jobApp = manager.create(JobApplicant, {
+        applicant: user,
+        job,
+        cv,
+        about,
+      });
+
+      await manager.save(jobApp);
+    });
 
     return { message: "application the job successful" };
   }
@@ -347,54 +360,70 @@ export class JobServices {
   }
 
   public async hiredCV(companyId: string, id: string, dto: HiredDTO) {
-    const jobApplicantion = await this.jobApplicantRepository.findOne({
-      where: {
-        id,
-        job: {
-          company: { id: companyId },
-        },
-      },
-    });
-    if (!jobApplicantion) throw new BadRequestException("please try again");
-
-    if (jobApplicantion.status === CandidateStatus.HIRED) {
-      throw new BadRequestException("status of candidate is already hired");
-    }
-
-    if (!(jobApplicantion.status === CandidateStatus.OFFERED)) {
-      throw new BadRequestException(
-        `the candidate status ${jobApplicantion.status}, can't hired`,
-      );
-    }
-
-    if (!(jobApplicantion.offer.status === OfferStatus.ACCEPTED)) {
-      throw new BadRequestException(
-        "this offer is not accepted , can't hired",
-      );
-    }
-
     const { startDate } = dto;
 
-    jobApplicantion.status = CandidateStatus.HIRED;
-    jobApplicantion.hiredAt = new Date();
-    const jobApply = await this.jobApplicantRepository.save(jobApplicantion);
+    const result = await this.dataSource.transaction(async (manager) => {
+      const jobAppDB = await manager.findOne(JobApplicant, {
+        where: {
+          id,
+          job: {
+            company: { id: companyId },
+          },
+        },
+        relations: ["offer", "job"],
+        lock: { mode: "pessimistic_write" },
+      });
 
-    const nHired = this.hiredRepository.create({
-      startDate,
-      application: jobApplicantion,
+      if (!jobAppDB) {
+        throw new BadRequestException("please try again");
+      }
+
+      if (jobAppDB.status === CandidateStatus.HIRED) {
+        throw new BadRequestException("status of candidate is already hired");
+      }
+
+      if (jobAppDB.status !== CandidateStatus.OFFERED) {
+        throw new BadRequestException(
+          `the candidate status ${jobAppDB.status}, can't hired`,
+        );
+      }
+
+      if (jobAppDB.offer.status !== OfferStatus.ACCEPTED) {
+        throw new BadRequestException(
+          "this offer is not accepted , can't hired",
+        );
+      }
+
+      if (jobAppDB.job.acceptedCount >= jobAppDB.job.positions) {
+        throw new BadRequestException("Hiring limit reached");
+      }
+
+      jobAppDB.status = CandidateStatus.HIRED;
+      jobAppDB.hiredAt = new Date();
+
+      const jobApply = await manager.save(jobAppDB);
+
+      await manager.increment(Job, { id: jobAppDB.job.id }, "acceptedCount", 1);
+
+      const hired = manager.create(HiredDetails, {
+        startDate,
+        application: jobAppDB,
+      });
+
+      const savedHired = await manager.save(hired);
+
+      return {
+        message: "convert candidate status to hired successful",
+        data: {
+          id: jobApply.id,
+          status: jobApply.status,
+          hiredAt: jobApply.hiredAt,
+          startDate: savedHired.startDate,
+        },
+      };
     });
 
-    const Nhired = await this.hiredRepository.save(nHired);
-
-    return {
-      message: "convert cadidate status to hired successful",
-      date: {
-        id: jobApply.id,
-        status: jobApply.status,
-        hiredAt: jobApply.hiredAt,
-        startDate: Nhired.startDate,
-      },
-    };
+    return result;
   }
 
   public async interviewCV(companyId: string, id: string, dto: InterviewDTO) {

@@ -1,10 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Put,
-  UseGuards,
-} from "@nestjs/common";
+import { Body, Controller, Delete, Get, Put, UseGuards } from "@nestjs/common";
 import { UserService } from "./user.service";
 import { ApiSecurity } from "@nestjs/swagger";
 import type { JwtPayloadType } from "src/Shared/types/JwtPayloadType";
@@ -15,14 +9,14 @@ import { currentUser } from "../../Shared/decorator/currentUser.decorator";
 import { updateUserDTO } from "./dto/updateUser.dto";
 import { JobServices } from "../Job/job.service";
 
-@Controller("user")
+@Controller("user/me")
 export class UserController {
   constructor(
     private userService: UserService,
     private jobService: JobServices,
   ) {}
 
-  @Get("/me")
+  @Get("")
   @Roles(RoleUser.APPLICANT)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
@@ -33,7 +27,7 @@ export class UserController {
     };
   }
 
-  @Get("me/basic_info")
+  @Get("basic_info")
   @Roles(RoleUser.APPLICANT)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
@@ -44,7 +38,7 @@ export class UserController {
     };
   }
 
-  @Put("me/basic_info")
+  @Put("basic_info")
   @Roles(RoleUser.APPLICANT)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
@@ -58,7 +52,7 @@ export class UserController {
     };
   }
 
-  @Get("me/completion")
+  @Get("completion")
   @Roles(RoleUser.APPLICANT)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
@@ -69,7 +63,7 @@ export class UserController {
     };
   }
 
-  @Get("me/dashboard-stats")
+  @Get("dashboard-stats")
   @Roles(RoleUser.APPLICANT)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
@@ -78,4 +72,13 @@ export class UserController {
     return { data };
   }
 
+  @Delete("detele")
+  @Roles(RoleUser.APPLICANT)
+  @UseGuards(AuthGuard)
+  @ApiSecurity("bearer")
+  public async deleteAccount(@currentUser() user: JwtPayloadType) {
+    const data = await this.userService.deleteAccount(user.id);
+
+    return { data };
+  }
 }

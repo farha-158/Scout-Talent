@@ -24,6 +24,9 @@ import { GoogleAuthGuard } from "./guards/google_auth.guard";
 import { userRoleDTO } from "./dto/userRole.dto";
 import { RoleUser } from "src/Shared/Enums/user.enum";
 import type { JwtPayloadType } from "src/Shared/types/JwtPayloadType";
+import { requestRestoreDTO } from "./dto/requestRestore.dto";
+import { ConfigService } from "@nestjs/config";
+import { daysToMilliseconds } from "src/Shared/utils/cookie.util";
 
 interface RequestWithCookies extends Request {
   cookies: {
@@ -37,7 +40,10 @@ interface GoogleAuth {
 }
 @Controller("auth")
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private config: ConfigService,
+  ) {}
 
   @Post("register")
   public async register(@Body() body: registerDTO) {
@@ -51,18 +57,25 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
     @Body() body: loginDTO,
   ) {
-    const { message, accessToken, refreshToken ,u} =
+    const { message, accessToken, refreshToken, u } =
       await this.authService.login(body);
+
+    let maxAge = 0;
+    if (body.rememberMe) {
+      maxAge = daysToMilliseconds(30);
+    } else {
+      maxAge = daysToMilliseconds(7);
+    }
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: true,
       sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge,
     });
 
     return {
-      data: { message, accessToken ,user:u},
+      data: { message, accessToken, user: u },
     };
   }
 
@@ -104,12 +117,9 @@ export class AuthController {
     return { data: { msg: "log out successful" } };
   }
 
-  @Get("verify-email/:id/:verificationToken")
-  public async verifyEmail(
-    @Param("id") id: string,
-    @Param("verificationToken") verificationToken: string,
-  ) {
-    const data = await this.authService.verifyEmail(id, verificationToken);
+  @Get("verify-email/:token")
+  public async verifyEmail(@Param("token") token: string) {
+    const data = await this.authService.verifyEmail(token);
     return { data };
   }
 
@@ -119,20 +129,26 @@ export class AuthController {
     return { data: msg };
   }
 
-  @Post("reset_password/:id/:resetPasswordToken")
+  @Post("reset_password/:token")
   public async resetPassword(
-    @Param("resetPasswordToken") resetPasswordToken: string,
-    @Param("id") id: string,
+    @Param("token") token: string,
     @Body() body: resetPasswordDTO,
   ) {
-    const msg = await this.authService.resetPassword(
-      body,
-      id,
-      resetPasswordToken,
-    );
+    const msg = await this.authService.resetPassword(body, token);
     return {
       data: msg,
     };
+  }
+
+  @Post("restore/request")
+  public async RequestRestore(@Body() body: requestRestoreDTO) {
+    const msg = await this.authService.requestRestore(body);
+    return { data: msg };
+  }
+
+  @Post("restore/confrim/:token")
+  public async ConfirmRestore(@Param("token") token: string) {
+    return this.authService.confirmRestore(token);
   }
 
   @Get("google")
@@ -150,28 +166,25 @@ export class AuthController {
     if (!email || !name)
       throw new BadRequestException("something false, please try again");
 
-    const { message, needRole, token, userId } =
-      await this.authService.GoogleAuth(email, name);
+    const { needRole, token, userId } = await this.authService.GoogleAuth(
+      email,
+      name,
+    );
+
     if (needRole && !token) {
-      return {
-        data: {
-          message,
-          needRole,
-          userId,
-        },
-      };
+      return res.redirect(
+        `${this.config.get<string>("SELECT_ROLE_URL")}?id=${userId}`,
+      );
     }
 
     res.cookie("refreshToken", token?.refreshToken, {
       httpOnly: true,
       secure: true,
       sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: daysToMilliseconds(30),
     });
 
-    return {
-      data: { message, accessToken: token?.accessToken },
-    };
+    return res.redirect(`${this.config.get<string>("HOME_URL")}`);
   }
 
   @Post("select-role/:id")
@@ -180,18 +193,29 @@ export class AuthController {
     @Body() body: userRoleDTO,
     @Param("id") id: string,
   ) {
-    const { message, refreshToken, accessToken } =
-      await this.authService.SelectRoleuser(body, id);
+    const { message, refreshToken, accessToken, u } =
+      await this.authService.SelectRoleUser(body, id);
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: true,
       sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: daysToMilliseconds(30),
     });
 
     return {
-      data: { message, accessToken },
+      data: { message, accessToken, user: u },
     };
+  }
+
+  @Post("getMe")
+  public async getMe(@Req() req: RequestWithCookies) {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) throw new BadRequestException("no refresh token");
+
+    const data = await this.authService.getMe(refreshToken);
+
+    return { data };
   }
 }

@@ -47,6 +47,12 @@ export class Job {
   @Column({ type: "int", nullable: true })
   maxApplications: number;
 
+  @Column({ default: 0 })
+  applicationsCount: number;
+
+  @Column({ default: 0 })
+  acceptedCount: number;
+
   @Column({ type: "timestamptz" })
   deadline: Date;
 
@@ -70,6 +76,6 @@ export class Job {
   @ManyToOne(() => User, (user) => user.jobs, { eager: true })
   company: User;
 
-  @OneToMany(() => JobApplicant, (jobApllicant) => jobApllicant.applicant)
+  @OneToMany(() => JobApplicant, (jobApplicant) => jobApplicant.job)
   applicants: JobApplicant[];
 }

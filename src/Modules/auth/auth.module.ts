@@ -9,10 +9,12 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { User } from "../Users/user.entity";
 import { UserModule } from "../Users/user.module";
 import { GoogleStrategy } from "./strategies/google.strategy";
+import { UserToken } from "../Users/user-token.entity";
+import { Outbox } from "../Users/outbox.entity";
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService,GoogleStrategy],
+  providers: [AuthService, GoogleStrategy],
   imports: [
     JwtModule.registerAsync({
       inject: [ConfigService],
@@ -30,7 +32,7 @@ import { GoogleStrategy } from "./strategies/google.strategy";
     }),
     MailModule,
     UserModule,
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, UserToken, Outbox]),
   ],
 })
 export class AuthModule {}

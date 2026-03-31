@@ -157,6 +157,20 @@ export class UserService {
     };
   }
 
+  public async deleteAccount(id: string) {
+    const user = await this.userRepository.findOne({
+      where: { id },
+    });
+
+    if (!user) throw new BadRequestException("no user found");
+
+    user.isDelete = true;
+    user.refreshToken = '';
+    await this.userRepository.save(user);
+
+    return { message: "Account deleted successfully" };
+  }
+
   private getDateBeforeMonths(month: number) {
     const date = new Date();
 

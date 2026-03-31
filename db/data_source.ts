@@ -12,6 +12,8 @@ import { JobOffer } from "src/Modules/Job/jobOffer.entity";
 import { Reject } from "src/Modules/Job/reject.entity";
 import { FeedBack } from "src/Modules/Job/feedback.entity";
 import { CancelInterview } from "src/Modules/Job/cancelInterview.entity";
+import { Outbox } from "src/Modules/Users/outbox.entity";
+import { UserToken } from "src/Modules/Users/user-token.entity";
 config({ path: ".env" });
 
 export const dataSourceOptions: DataSourceOptions = {
@@ -19,6 +21,8 @@ export const dataSourceOptions: DataSourceOptions = {
   url: process.env.DB_URL,
   entities: [
     User,
+    UserToken,
+    Outbox,
     CV,
     Job,
     JobApplicant,

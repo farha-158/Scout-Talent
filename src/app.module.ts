@@ -10,6 +10,8 @@ import { SkillModule } from "./Modules/Skills/skills.module";
 import { ExperienceModule } from "./Modules/Experience/experience.module";
 import { AuthModule } from "./Modules/auth/auth.module";
 import { dataSourceOptions } from "db/data_source";
+import { ScheduleModule } from "@nestjs/schedule";
+import { JobCornModule } from "./Jobs/job.module";
 
 @Module({
   imports: [
@@ -17,6 +19,7 @@ import { dataSourceOptions } from "db/data_source";
     CVModule,
     JobModule,
     SkillModule,
+    JobCornModule,
     ExperienceModule,
     MailModule,
     AuthModule,
@@ -25,6 +28,7 @@ import { dataSourceOptions } from "db/data_source";
       isGlobal: true,
       envFilePath: ".env",
     }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

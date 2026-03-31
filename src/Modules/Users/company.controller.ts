@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Post,
   Put,
@@ -19,14 +20,14 @@ import { updateoraddAboutDTO } from "./dto/update&addAbout.dto";
 import { JobStatus } from "src/Shared/Enums/job.enum";
 import { JobServices } from "../Job/job.service";
 
-@Controller("company")
+@Controller("company/me")
 export class CompanyController {
   constructor(
     private userService: UserService,
     private jobService: JobServices,
   ) {}
 
-  @Get("me")
+  @Get("")
   @Roles(RoleUser.COMPANY)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
@@ -37,7 +38,7 @@ export class CompanyController {
     };
   }
 
-  @Get("me/basic_info")
+  @Get("basic_info")
   @Roles(RoleUser.COMPANY)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
@@ -48,7 +49,7 @@ export class CompanyController {
     };
   }
 
-  @Put("me/basic_info")
+  @Put("basic_info")
   @Roles(RoleUser.COMPANY)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
@@ -62,7 +63,7 @@ export class CompanyController {
     };
   }
 
-  @Post("me/about")
+  @Post("about")
   @Roles(RoleUser.COMPANY)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
@@ -77,7 +78,7 @@ export class CompanyController {
     };
   }
 
-  @Get("me/completion")
+  @Get("completion")
   @Roles(RoleUser.COMPANY)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
@@ -88,7 +89,7 @@ export class CompanyController {
     };
   }
 
-  @Get("me/dashboard-stats")
+  @Get("dashboard-stats")
   @Roles(RoleUser.COMPANY)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
@@ -99,7 +100,7 @@ export class CompanyController {
     };
   }
 
-  @Get("me/jobs")
+  @Get("jobs")
   @Roles(RoleUser.COMPANY)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
@@ -112,4 +113,13 @@ export class CompanyController {
     return { data };
   }
 
+  @Delete("detele")
+  @Roles(RoleUser.COMPANY)
+  @UseGuards(AuthGuard)
+  @ApiSecurity("bearer")
+  public async deleteAccount(@currentUser() user: JwtPayloadType) {
+    const data = await this.userService.deleteAccount(user.id);
+
+    return { data };
+  }
 }

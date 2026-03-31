@@ -16,7 +16,8 @@ export enum WorkMode {
 
 export enum JobStatus {
     DRAFT = 'Draft',               
-    PUBLISHED = 'Published',     
+    PUBLISHED = 'Published', 
+    APPLICATIONS_FULL = 'ApplicationsFull',    
     CLOSED = 'Closed',             
     PAUSED = 'Paused',              
     EXPIRED = 'Expired',            
