@@ -1,40 +1,22 @@
-import { forwardRef, Module } from "@nestjs/common";
-import { JobServices } from "./job.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { Job } from "./job.entity";
-import { JobApplicant } from "./job_applicant.entity";
 import { JobController } from "./job.controller";
-import { UserModule } from "../Users/user.module";
 import { JwtModule } from "@nestjs/jwt";
-import { CVModule } from "../CV/cv.module";
-import { CandidateController } from "./candidate.controller";
-import { HiredDetails } from "./Hired_Details.entity";
-import { Interview } from "./interviews.entity";
-import { JobOffer } from "./jobOffer.entity";
-import { Reject } from "./reject.entity";
-import { FeedBack } from "./feedback.entity";
-import { CancelInterview } from "./cancelInterview.entity";
-import { InterviewController } from "./interview.controller";
-import { InterviewService } from "./interview.service";
+import { JobService } from "./job.service";
+import { forwardRef, Module } from "@nestjs/common";
+import { CompanyModule } from "../company/company.module";
+import { UserModule } from "../Users/user.module";
 
 @Module({
+  providers: [JobService],
   imports: [
-    forwardRef(() => UserModule),
+    UserModule,
+    forwardRef(() => CompanyModule),
     JwtModule,
-    CVModule,
-    TypeOrmModule.forFeature([
-      Job,
-      JobApplicant,
-      HiredDetails,
-      Interview,
-      JobOffer,
-      Reject,
-      FeedBack,
-      CancelInterview,
-    ]),
+    TypeOrmModule.forFeature([Job]),
   ],
-  controllers: [JobController, CandidateController, InterviewController],
-  providers: [JobServices, InterviewService],
-  exports: [JobServices],
+  controllers: [JobController],
+
+  exports: [JobService],
 })
 export class JobModule {}

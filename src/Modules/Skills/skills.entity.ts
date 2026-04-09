@@ -5,19 +5,19 @@ import {
   CreateDateColumn,
   ManyToOne,
 } from "typeorm";
-import { User } from "../Users/user.entity";
+import { Applicant } from "../applicant/applicant.entity";
 
 @Entity({ name: "skills" })
-export class SkillOrSpecializations {
+export class Skill {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
   @Column()
   name: string;
 
-  @CreateDateColumn({ type: "timestamptz"})
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt: Date;
 
-  @ManyToOne(() => User, (user) => user.skillsORspecializations)
-  userORcompany: User;
+  @ManyToOne(() => Applicant, (app) => app.skills)
+  applicant: Applicant;
 }

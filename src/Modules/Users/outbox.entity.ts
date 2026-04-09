@@ -1,4 +1,3 @@
-import { EVENT_TYPE, STATUS } from "src/Shared/Enums/outbox.enum";
 import {
   Column,
   CreateDateColumn,
@@ -6,6 +5,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
+import { EVENT_TYPE, STATUS } from "../../Shared/Enums/outbox.enum";
 
 @Entity({ name: "outbox" })
 export class Outbox {

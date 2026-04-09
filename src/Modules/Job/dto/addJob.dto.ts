@@ -1,63 +1,63 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsISO8601, IsNumber, IsString } from "class-validator";
-import { JobStatus, JobType, WorkMode } from "src/Shared/Enums/job.enum";
+import { JobStatus, JobType, WorkMode } from "../../../Shared/Enums/job.enum";
 
 export class addJobDTO {
   @IsString()
   @ApiProperty()
-  title: string;
+  title!: string;
 
   @IsString()
   @ApiProperty()
-  location: string;
+  location!: string;
 
   @IsNumber()
   @ApiProperty()
-  minSalary: number;
+  minSalary!: number;
 
   @IsNumber()
   @ApiProperty()
-  maxSalary: number;
+  maxSalary!: number;
 
   @IsString()
   @ApiProperty()
-  type: JobType;
+  type!: JobType;
 
   @IsString()
   @ApiProperty()
-  status: JobStatus;
+  status!: JobStatus;
 
   @IsString()
   @ApiProperty()
-  workMode: WorkMode;
+  workMode!: WorkMode;
 
   @IsString()
   @ApiProperty()
-  description: string;
+  description!: string;
 
   @IsArray()
   @ApiProperty()
-  skills: string[];
+  skills!: string[];
 
   @IsArray()
   @ApiProperty()
-  responsibilities: string[];
+  responsibilities!: string[];
 
   @IsString()
   @ApiProperty()
-  requirements: string;
+  requirements!: string;
 
   @IsNumber()
   @ApiProperty()
-  positions: number;
+  positions!: number;
 
   @IsNumber()
   @ApiProperty({ required: false })
-  maxApplications: number;
+  maxApplications!: number;
 
   @IsISO8601({}, { message: "Invalid date format" })
   @ApiProperty({
     example: "2026-04-01T10:00:00+02:00",
   })
-  deadline:string
+  deadline!: string;
 }

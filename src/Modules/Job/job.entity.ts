@@ -1,4 +1,3 @@
-import { JobStatus, WorkMode, JobType } from "src/Shared/Enums/job.enum";
 import {
   Column,
   CreateDateColumn,
@@ -8,74 +7,74 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
-import { User } from "../Users/user.entity";
-import { JobApplicant } from "./job_applicant.entity";
+import { JobApplicant } from "../application/job_applicant.entity";
+import { Company } from "../company/company.entity";
+import { JobStatus, JobType, WorkMode } from "../../Shared/Enums/job.enum";
 
 @Entity({ name: "jobs" })
 export class Job {
   @PrimaryGeneratedColumn("uuid")
-  id: string;
+  id!: string;
 
   @Column()
-  title: string;
+  title!: string;
 
   @Column()
-  location: string;
+  location!: string;
 
   @Column({ type: "decimal", precision: 10, scale: 2, nullable: true })
-  minSalary: number;
+  minSalary!: number;
 
   @Column({ type: "decimal", precision: 10, scale: 2, nullable: true })
-  maxSalary: number;
+  maxSalary!: number;
 
-  // 📌 Type & Status
   @Column({ type: "enum", enum: JobType })
-  type: JobType;
+  type!: JobType;
 
   @Column({ type: "enum", enum: JobStatus, default: JobStatus.DRAFT })
-  status: JobStatus;
+  status!: JobStatus;
 
   @Column({ type: "enum", enum: WorkMode })
-  workMode: WorkMode;
+  workMode!: WorkMode;
 
   @Column({ type: "text" })
-  description: string;
+  description!: string;
 
   @Column({ type: "int" })
-  positions: number;
+  positions!: number;
 
   @Column({ type: "int", nullable: true })
-  maxApplications: number;
+  maxApplications!: number;
 
   @Column({ default: 0 })
-  applicationsCount: number;
+  applicationsCount!: number;
 
   @Column({ default: 0 })
-  acceptedCount: number;
+  acceptedCount!: number;
 
   @Column({ type: "timestamptz" })
-  deadline: Date;
+  deadline!: Date;
 
   @Column("simple-array", { nullable: true })
-  skills: string[];
+  skills!: string[];
 
   @Column("simple-array", { nullable: true })
-  responsibilities: string[];
+  responsibilities!: string[];
 
   @Column()
-  requirements: string;
+  requirements!: string;
 
   @CreateDateColumn({ type: "timestamptz" })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({
     type: "timestamptz",
   })
-  updatedAt: Date;
+  updatedAt!: Date;
 
-  @ManyToOne(() => User, (user) => user.jobs, { eager: true })
-  company: User;
+  @ManyToOne(() => Company, (com) => com.jobs, { eager: true })
+  company!: Company;
 
   @OneToMany(() => JobApplicant, (jobApplicant) => jobApplicant.job)
-  applicants: JobApplicant[];
+  applications!: JobApplicant[];
 }

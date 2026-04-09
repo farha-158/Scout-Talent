@@ -3,21 +3,21 @@ import {
   Controller,
   Delete,
   Param,
+  Patch,
   Post,
-  Put,
   UseGuards,
 } from "@nestjs/common";
 import { ExperienceService } from "./experience.service";
-import { RoleUser } from "src/Shared/Enums/user.enum";
 import { addExperienceDTO } from "./dto/addExperience.dto";
-import type { JwtPayloadType } from "src/Shared/types/JwtPayloadType";
 import { updateExperienceDTO } from "./dto/updateExperience.dto";
 import { Roles } from "../../Shared/decorator/user_role.decorator";
 import { AuthGuard } from "../auth/guards/AuthUser.guard";
 import { currentUser } from "../../Shared/decorator/currentUser.decorator";
 import { ApiSecurity } from "@nestjs/swagger";
+import { RoleUser } from "../../Shared/Enums/user.enum";
+import { JwtPayloadType } from "../../Shared/types/JwtPayloadType";
 
-@Controller("users/me")
+@Controller("applicants/me")
 export class ExperienceController {
   constructor(private experienceService: ExperienceService) {}
 
@@ -33,7 +33,7 @@ export class ExperienceController {
     return { data };
   }
 
-  @Put("experiences/:id")
+  @Patch("experiences/:id")
   @Roles(RoleUser.APPLICANT)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")

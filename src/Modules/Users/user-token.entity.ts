@@ -1,6 +1,6 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { User } from "./user.entity";
-import { UserTokenType } from "src/Shared/Enums/UserToken.enum";
+import { UserTokenType } from "../../Shared/Enums/UserToken.enum";
 
 @Entity({ name: "user-token" })
 export class UserToken {

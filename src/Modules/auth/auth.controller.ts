@@ -22,11 +22,11 @@ import { ApiSecurity } from "@nestjs/swagger";
 import { resendEmailVerify } from "./dto/resendEmailVerify.dto";
 import { GoogleAuthGuard } from "./guards/google_auth.guard";
 import { userRoleDTO } from "./dto/userRole.dto";
-import { RoleUser } from "src/Shared/Enums/user.enum";
-import type { JwtPayloadType } from "src/Shared/types/JwtPayloadType";
 import { requestRestoreDTO } from "./dto/requestRestore.dto";
 import { ConfigService } from "@nestjs/config";
-import { daysToMilliseconds } from "src/Shared/utils/cookie.util";
+import { daysToMilliseconds } from "../../Shared/utils/cookie.util";
+import { RoleUser } from "../../Shared/Enums/user.enum";
+import { JwtPayloadType } from "../../Shared/types/JwtPayloadType";
 
 interface RequestWithCookies extends Request {
   cookies: {
@@ -38,6 +38,7 @@ interface GoogleAuth {
   email: string;
   name: string;
 }
+
 @Controller("auth")
 export class AuthController {
   constructor(

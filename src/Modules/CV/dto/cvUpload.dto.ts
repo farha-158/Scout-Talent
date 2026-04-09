@@ -10,5 +10,5 @@ export class uploadImageDTO {
         required : true,
         name : 'cv'
     })
-    file : Express.Multer.File
+    file! : Express.Multer.File
 }

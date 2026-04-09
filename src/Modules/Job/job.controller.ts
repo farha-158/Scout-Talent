@@ -4,50 +4,48 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
-  Put,
   UseGuards,
 } from "@nestjs/common";
-import { JobServices } from "./job.service";
 import { addJobDTO } from "./dto/addJob.dto";
-import { RoleUser } from "src/Shared/Enums/user.enum";
 import { updateJobDTO } from "./dto/updateJob.dto";
-import type { JwtPayloadType } from "src/Shared/types/JwtPayloadType";
-import { applyJobDTO } from "./dto/applyJob.dto";
 import { Roles } from "../../Shared/decorator/user_role.decorator";
 import { AuthGuard } from "../auth/guards/AuthUser.guard";
 import { currentUser } from "../../Shared/decorator/currentUser.decorator";
 import { jobStatusDTO } from "./dto/statusJob.dto";
 import { ApiBody, ApiSecurity } from "@nestjs/swagger";
+import { JobService } from "./job.service";
+import { RoleUser } from "../../Shared/Enums/user.enum";
+import { JwtPayloadType } from "../../Shared/types/JwtPayloadType";
+import { ApplicationService } from "../application/application.service";
+import { applyJobDTO } from "../application/dto/applyJob.dto";
 
 @Controller("jobs")
 export class JobController {
-  constructor(private jobService: JobServices) {}
+  constructor(
+    private jobService: JobService,
+    private applicationService: ApplicationService,
+  ) {}
 
-  @Post("createJob")
+  @Post("create")
   @Roles(RoleUser.COMPANY)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
   public async CreateJob(
     @Body() body: addJobDTO,
-    @currentUser() company: JwtPayloadType,
+    @currentUser() user: JwtPayloadType,
   ) {
-    const data = await this.jobService.Addjob(body, company.id);
+    const data = await this.jobService.Addjob(body, user.id);
     return { data };
   }
 
-  @Get("allJob")
+  @Get("all")
   @Roles(RoleUser.APPLICANT)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")
   public async GetAllJobs() {
     const data = await this.jobService.getAllJob();
-    return { data };
-  }
-
-  @Get("jobs/:id")
-  public async GetJob(@Param("id") id: string) {
-    const data = await this.jobService.getJob(id);
     return { data };
   }
 
@@ -61,7 +59,12 @@ export class JobController {
     @Param("cvId") cvId: string,
     @Body() body: applyJobDTO,
   ) {
-    const data = await this.jobService.applyJob(user.id, jobId, cvId, body);
+    const data = await this.applicationService.applyJob(
+      user.id,
+      jobId,
+      cvId,
+      body,
+    );
     return { data };
   }
 
@@ -77,7 +80,7 @@ export class JobController {
     return { data };
   }
 
-  @Put("/:id")
+  @Patch("/:id")
   @Roles(RoleUser.COMPANY)
   @UseGuards(AuthGuard)
   @ApiSecurity("bearer")

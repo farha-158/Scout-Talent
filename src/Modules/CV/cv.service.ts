@@ -1,21 +1,24 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, forwardRef, Inject, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { CV } from "./cv.entity";
 import { Repository } from "typeorm";
-import { UserService } from "../Users/user.service";
+import { ApplicantService } from "../applicant/applicant.service";
+
 @Injectable()
 export class CVService {
   constructor(
     @InjectRepository(CV) private cvRepository: Repository<CV>,
-    private userService: UserService,
+
+    @Inject(forwardRef(()=>ApplicantService))
+    private applicantService: ApplicantService,
   ) {}
 
-  public async uploadCV(userId: string, url: string ,name:string) {
-    const user = await this.userService.findUser(userId);
+  public async uploadCV(userId: string, url: string, name: string) {
+    const user = await this.applicantService.findApplicantWithIdUser(userId);
 
     if (!user) throw new BadRequestException("user not found");
 
-    const cv = this.cvRepository.create({name, url, applicant: user });
+    const cv = this.cvRepository.create({ name, url, applicant: user });
 
     await this.cvRepository.save(cv);
 
@@ -23,25 +26,29 @@ export class CVService {
   }
 
   public async getAllCVFromUser(userId: string) {
-    const user = await this.userService.findUser(userId);
+    const user = await this.applicantService.findApplicantWithIdUser(userId);
 
     if (!user) throw new BadRequestException("user not found");
 
-    const cvs = await this.cvRepository.find({where:{applicant:{id:user.id}}});
+    const cvs = await this.cvRepository.find({
+      where: { applicant: { id: user.id } },
+    });
 
-    return {cvs};
+    return { cvs };
   }
 
   public async deleteCV(userId: string, cvId: string) {
-    const user = await this.userService.findUser(userId);
+    const user = await this.applicantService.findApplicantWithIdUser(userId);
 
     if (!user) throw new BadRequestException("user not found");
 
     await this.cvRepository.delete({
-        id:cvId,applicant:user
-    })
-    return {message:'delete successful'}
+      id: cvId,
+      applicant: user,
+    });
+    return { message: "delete successful" };
   }
+
   public async findCV(id: string) {
     const cv = await this.cvRepository.findOne({ where: { id } });
 

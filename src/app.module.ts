@@ -9,20 +9,33 @@ import { ThrottlerModule } from "@nestjs/throttler";
 import { SkillModule } from "./Modules/Skills/skills.module";
 import { ExperienceModule } from "./Modules/Experience/experience.module";
 import { AuthModule } from "./Modules/auth/auth.module";
-import { dataSourceOptions } from "db/data_source";
 import { ScheduleModule } from "@nestjs/schedule";
-import { JobCornModule } from "./Jobs/job.module";
+import { JobCornModule } from "./JobsCorn/jobCorn.module";
+import { ApplicantModule } from "./Modules/applicant/applicant.module";
+import { CompanyModule } from "./Modules/company/company.module";
+import { InterviewModule } from "./Modules/interview/interview.module";
+import { SpecializationModule } from "./Modules/specialization/specialization.module";
+import { dataSourceOptions } from "../db/data_source";
+import { ApplicationModule } from "./Modules/application/application.module";
+import { OfferModule } from "./Modules/offer/offer.module";
 
 @Module({
   imports: [
+    OfferModule,
+    JobModule,
+
     UserModule,
     CVModule,
-    JobModule,
+    ApplicantModule,
+    ApplicationModule,
     SkillModule,
+    SpecializationModule,
     JobCornModule,
     ExperienceModule,
     MailModule,
     AuthModule,
+    CompanyModule,
+    InterviewModule,
     TypeOrmModule.forRoot(dataSourceOptions),
     ConfigModule.forRoot({
       isGlobal: true,

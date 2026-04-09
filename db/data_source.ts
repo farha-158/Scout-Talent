@@ -1,19 +1,23 @@
 import { DataSource, DataSourceOptions } from "typeorm";
 import { config } from "dotenv";
-import { User } from "src/Modules/Users/user.entity";
-import { CV } from "src/Modules/CV/cv.entity";
-import { Job } from "src/Modules/Job/job.entity";
-import { JobApplicant } from "src/Modules/Job/job_applicant.entity";
-import { SkillOrSpecializations } from "src/Modules/Skills/skills.entity";
-import { Experience } from "src/Modules/Experience/experience.entity";
-import { HiredDetails } from "src/Modules/Job/Hired_Details.entity";
-import { Interview } from "src/Modules/Job/interviews.entity";
-import { JobOffer } from "src/Modules/Job/jobOffer.entity";
-import { Reject } from "src/Modules/Job/reject.entity";
-import { FeedBack } from "src/Modules/Job/feedback.entity";
-import { CancelInterview } from "src/Modules/Job/cancelInterview.entity";
-import { Outbox } from "src/Modules/Users/outbox.entity";
-import { UserToken } from "src/Modules/Users/user-token.entity";
+import { User } from "../src/Modules/Users/user.entity";
+import { UserToken } from "../src/Modules/Users/user-token.entity";
+import { Outbox } from "../src/Modules/Users/outbox.entity";
+import { CV } from "../src/Modules/CV/cv.entity";
+import { Job } from "../src/Modules/Job/job.entity";
+import { JobApplicant } from "../src/Modules/application/job_applicant.entity";
+import { Experience } from "../src/Modules/Experience/experience.entity";
+import { JobOffer } from "../src/Modules/offer/jobOffer.entity";
+import { Reject } from "../src/Modules/application/reject.entity";
+import { Applicant } from "../src/Modules/applicant/applicant.entity";
+import { Company } from "../src/Modules/company/company.entity";
+import { Interview } from "../src/Modules/interview/interviews.entity";
+import { FeedBack } from "../src/Modules/interview/feedback.entity";
+import { CancelInterview } from "../src/Modules/interview/cancelInterview.entity";
+import { Skill } from "../src/Modules/Skills/skills.entity";
+import { Specializations } from "../src/Modules/specialization/specialization.entity";
+import { HiredDetails } from "../src/Modules/application/Hired_Details.entity";
+
 config({ path: ".env" });
 
 export const dataSourceOptions: DataSourceOptions = {
@@ -26,14 +30,17 @@ export const dataSourceOptions: DataSourceOptions = {
     CV,
     Job,
     JobApplicant,
-    SkillOrSpecializations,
     Experience,
     HiredDetails,
-    Interview,
     JobOffer,
     Reject,
+    Applicant,
+    Company,
+    Interview,
     FeedBack,
-    CancelInterview
+    CancelInterview,
+    Skill,
+    Specializations,
   ],
   migrations: ["dist/db/migrations/*.js"],
 };

@@ -12,13 +12,13 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import type { Express } from "express";
 import { CVService } from "./cv.service";
-import type { JwtPayloadType } from "src/Shared/types/JwtPayloadType";
 import { Roles } from "../../Shared/decorator/user_role.decorator";
-import { RoleUser } from "src/Shared/Enums/user.enum";
 import { AuthGuard } from "../auth/guards/AuthUser.guard";
 import { currentUser } from "../../Shared/decorator/currentUser.decorator";
 import { ApiBody, ApiConsumes, ApiSecurity } from "@nestjs/swagger";
 import { uploadImageDTO } from "./dto/cvUpload.dto";
+import { RoleUser } from "../../Shared/Enums/user.enum";
+import { JwtPayloadType } from "../../Shared/types/JwtPayloadType";
 
 @Controller("cv")
 export class CVController {

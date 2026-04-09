@@ -6,26 +6,26 @@ import {
   ManyToOne,
   OneToMany,
 } from "typeorm";
-import { User } from "../Users/user.entity";
-import { JobApplicant } from "../Job/job_applicant.entity";
+import { JobApplicant } from "../application/job_applicant.entity";
+import { Applicant } from "../applicant/applicant.entity";
 
 @Entity({ name: "CV" })
 export class CV {
   @PrimaryGeneratedColumn("uuid")
-  id: string;
+  id!: string;
 
   @Column()
-  name: string;
+  name!: string;
 
   @Column()
-  url: string;
+  url!: string;
 
   @CreateDateColumn({ type: "timestamptz" })
-  createdAt: Date;
+  createdAt!: Date;
 
-  @ManyToOne(() => User, (user) => user.Cvs)
-  applicant: User;
+  @ManyToOne(() => Applicant, (user) => user.Cvs)
+  applicant!: Applicant;
 
   @OneToMany(() => JobApplicant, (app) => app.cv)
-  applications: JobApplicant[];
+  applications!: JobApplicant[];
 }

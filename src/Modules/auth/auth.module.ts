@@ -4,13 +4,14 @@ import { AuthService } from "./auth.service";
 import { JwtModule } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { StringValue } from "ms";
-import { MailModule } from "src/Shared/Mail/mail.module";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { User } from "../Users/user.entity";
 import { UserModule } from "../Users/user.module";
 import { GoogleStrategy } from "./strategies/google.strategy";
 import { UserToken } from "../Users/user-token.entity";
 import { Outbox } from "../Users/outbox.entity";
+import { MailModule } from "../../Shared/Mail/mail.module";
+import { ApplicantModule } from "../applicant/applicant.module";
+import { CompanyModule } from "../company/company.module";
 
 @Module({
   controllers: [AuthController],
@@ -32,7 +33,9 @@ import { Outbox } from "../Users/outbox.entity";
     }),
     MailModule,
     UserModule,
-    TypeOrmModule.forFeature([User, UserToken, Outbox]),
+    ApplicantModule,
+    CompanyModule,
+    TypeOrmModule.forFeature([ UserToken, Outbox]),
   ],
 })
 export class AuthModule {}
